@@ -1,5 +1,6 @@
-import GovbrRegistry from '../components/GovbrRegistry.tsx';
+import GovbrRegistry from '../components/govbr/GovbrRegistry';
 import '@govbr-ds/core/dist/core.min.css';
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,3 +13,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
