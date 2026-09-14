@@ -1,18 +1,21 @@
-import '@govbr-ds/core/dist/core.css';
-import GovProvider from '@/components/GovProvider';
+import type { Metadata } from "next";
+import GovbrRegistry from "@/components/gov/GovbrRegistry";
+import "@govbr-ds/core/dist/core.min.css";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const metadata: Metadata = {
+  title: "Portal do Mesário",
+  description: "Portal de serviços para mesários voluntários",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="pt-BR">
-      <head>
-        {/* Fontes necessárias para o Design System Gov.br */}
-        <link href="https://fonts.cdnfonts.com/css/rawline" rel="stylesheet" />
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
-      </head>
       <body>
-        <GovProvider>
-          {children}
-        </GovProvider>
+        <GovbrRegistry>{children}</GovbrRegistry>
       </body>
     </html>
   );

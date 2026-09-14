@@ -1,0 +1,38 @@
+.header::part(bottom) {
+  display: none;
+}
+
+.iconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #1351b4;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.iconButton:hover {
+    background-color: #e3eefd;
+}
+
+.iconButton:focus-visible {
+    outline: 3px solid #ffcd07;
+    outline-offset: 2px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.icon {
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+}

@@ -1,0 +1,58 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 0.5rem 1rem;
+  background-color: #ffffff;
+}
+
+.text {
+  margin: 0;
+  color: #454540;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: justify;
+}
+
+.text strong {
+  color: #1351b4;
+  font-weight: 700;
+}
+
+.portalButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.375rem 1rem 0.4375rem;
+  border-radius: 0.3125rem;
+  color: #ffffff;
+  background-color: #1351b4;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+}
+
+.portalButton:hover {
+  background-color: #0c326f;
+}
+
+.portalButton:focus-visible {
+  outline: 3px solid #ffcd07;
+  outline-offset: 2px;
+}
+
+.portalButton:active {
+  background-color: #071d41;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: #1351b4;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
