@@ -4,13 +4,21 @@ import { usePathname } from "next/navigation";
 
 import SidebarNavItem from "./SidebarNavItem";
 import { sidebarNavItems } from "./sidebarConfig";
+import { useSidebar } from "./SidebarContext";
 import styles from "./SidebarModule.module.css";
+
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { isOpen } = useSidebar();
 
   return (
-    <aside className={styles.sidebar} aria-label="Menu do cartório">
+    <aside
+      id="cartorio-sidebar"
+      className={`${styles.sidebar} ${!isOpen ? styles.sidebarClosed : ""}`}
+      aria-label="Menu do cartório"
+      inert={!isOpen}
+    >
       <nav aria-label="Navegação principal">
         <ul className={styles.list}>
           {sidebarNavItems.map((item) => {
