@@ -1,18 +1,16 @@
 import type { SVGProps } from "react";
 
-
-
 export type IconProps = SVGProps<SVGSVGElement>;
 
-const baseProps = {
-viewBox: "0 0 24 24",
-fill: "none",
-stroke: "currentColor",
-strokeWidth: 1.75,
-strokeLinecap: "round" as const,
-strokeLinejoin: "round" as const,
-"aria-hidden": true,
-focusable: "false",
+const baseProps: SVGProps<SVGSVGElement> = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.75,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": true,
+  focusable: false,
 };
 
 export function GridIcon(props: IconProps) {
