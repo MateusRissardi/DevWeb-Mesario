@@ -1,7 +1,9 @@
+"use client";
+
 import {
   BrButton,
   BrCard,
-} from "@govbr-ds/webcomponents-react/ssr";
+} from "@govbr-ds/webcomponents-react";
 
 import styles from "./AttentionCard.module.css";
 
@@ -40,6 +42,7 @@ export default function AttentionCard({
                 type="button"
                 emphasis="primary"
                 density="small"
+                shape="pill"
                 value={item.id}
               >
                 {item.actionLabel}

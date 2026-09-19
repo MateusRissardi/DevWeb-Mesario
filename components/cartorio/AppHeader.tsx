@@ -20,7 +20,7 @@ export default function AppHeader({
   const { isOpen, toggle } = useSidebar();
 
   return (
-    <header>
+    <header className={styles.header}>
       <div className={styles.topBar}>
         <AccessibilityBar />
 

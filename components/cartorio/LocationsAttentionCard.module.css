@@ -1,0 +1,137 @@
+.card {
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    height: 13.875rem;
+    min-height: 13.875rem;
+    max-height: 13.875rem;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0.625rem;
+    border: 1px solid var(--gray-20, #cccccc);
+    border-radius: 0.3125rem;
+    background: #ffffff;
+}
+
+.header {
+    box-sizing: border-box;
+    display: flex;
+    min-height: 4rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0 0.5rem 0 1.125rem;
+}
+
+.title {
+    margin: 0;
+    color: var(--color-primary-default, #1351b4);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.iconButton {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+}
+
+.icon {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+}
+
+.tableViewport {
+    width: 100%;
+    height: 5.875rem;
+    min-height: 5.875rem;
+    flex: 0 0 5.875rem;
+    overflow: hidden;
+}
+
+.table {
+    width: 100%;
+    min-width: 25.9375rem;
+    border-spacing: 0;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.75rem;
+}
+
+.localColumn {
+    width: 34%;
+}
+
+.filledColumn {
+    width: 23%;
+}
+
+.vacanciesColumn {
+    width: 15%;
+}
+
+.statusColumn {
+    width: 28%;
+}
+
+.table th {
+    box-sizing: border-box;
+    height: 1.875rem;
+    padding: 0.3125rem 0.75rem;
+    background: var(--gray-05, #f0f0f0);
+    color: var(--color-primary-default, #1351b4);
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.table .sortedHeader {
+    background: var(--blue-10, #dbe8fb);
+}
+
+.table td {
+    box-sizing: border-box;
+    height: 4rem;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--gray-20, #cccccc);
+    color: #000000;
+    font-weight: 400;
+    line-height: 1.25;
+    vertical-align: middle;
+}
+
+.locationName {
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+.centered {
+    text-align: center;
+}
+
+.footer {
+    display: flex;
+    min-height: 2.625rem;
+    flex: 0 0 2.625rem;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding-top: 0.625rem;
+}
+
+.viewAllButton {
+    min-height: 2rem;
+    padding-right: 0.625rem;
+    padding-left: 0.625rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}

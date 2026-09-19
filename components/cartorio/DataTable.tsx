@@ -1,3 +1,4 @@
+"use client";
 import type { ReactNode } from "react";
 
 import {
@@ -7,7 +8,7 @@ import {
     BrTableHeader,
     BrTableHeaderCell,
     BrTableRow,
-} from "@govbr-ds/webcomponents-react/ssr";
+} from "@govbr-ds/webcomponents-react";
 
 import styles from "./DataTable.module.css";
 
