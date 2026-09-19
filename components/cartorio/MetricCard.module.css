@@ -1,62 +1,46 @@
 .card {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 7.25rem;
-}
-
-.card::part(wrapper) {
-  box-sizing: border-box;
-  height: 100%;
-  border: 1px solid var(--gray-20, #cccccc);
-  border-radius: 0.3125rem;
-  box-shadow: none;
-}
-
-.card::part(content) {
-  height: 100%;
-  padding: 0.625rem;
-}
-
-.content {
-  box-sizing: border-box;
-  display: flex;
-  height: 100%;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    height: 7.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0.625rem;
+    border: 1px solid var(--gray-20, #cccccc);
+    border-radius: 0.3125rem;
+    background-color: #ffffff;
 }
 
 .title {
-  color: var(--gray-70, #55554a);
-  font-size: 0.75rem;
-  font-weight: 300;
-  line-height: 1.5;
+    color: var(--gray-warm-50, #76766a);
+    font-size: 0.75rem;
+    font-weight: 300;
+    line-height: 1.5;
 }
 
 .value {
-  color: var(--color-primary-default, #1351b4);
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.5;
+    color: var(--color-primary-default,
+            #1351b4);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.5;
 }
 
 .comparison {
-  display: block;
-  align-self: flex-start;
-}
-
-.comparison::part(tag) {
-  min-height: 1.1875rem;
-  padding: 0.125rem 0.25rem;
-  border: 0;
-  border-radius: 0;
-  color: var(--gray-01, #fcfcfc);
-  background-color: var(
-    --color-primary-default,
-    #1351b4
-  );
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1rem;
+    box-sizing: border-box;
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 1.1875rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem 0.25rem;
+    color: var(--gray-01, #fcfcfc);
+    background-color: var(--color-primary-default,
+            #1351b4);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1rem;
+    white-space: nowrap;
 }
