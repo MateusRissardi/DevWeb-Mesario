@@ -18,7 +18,14 @@ export interface SidebarNavItem {
   id: string;
   label: string;
   href: string;
-  icon: ComponentType<IconProps>;
+  iconSrc: string;
+  badge?: number;
+}
+export interface SidebarNavItem {
+  id: string;
+  label: string;
+  href: string;
+  iconSrc: string;
   badge?: number;
 }
 
@@ -27,61 +34,61 @@ export const sidebarNavItems: SidebarNavItem[] = [
     id: "visao-geral",
     label: "Visão geral",
     href: "/cartorio",
-    icon: GridIcon,
+    iconSrc: "/assets/icons/sidebar/overview.svg",
   },
   {
     id: "pendencias",
     label: "Pendências",
     href: "/cartorio/pendencias",
-    icon: AlertIcon,
+    iconSrc: "/assets/icons/sidebar/pendencias.svg",
     badge: 4,
   },
   {
     id: "manifestacoes",
     label: "Manifestações",
     href: "/cartorio/manifestacoes",
-    icon: ChatIcon,
+    iconSrc: "/assets/icons/sidebar/manifestacoes.svg",
   },
   {
     id: "voluntarios",
     label: "Voluntários",
     href: "/cartorio/voluntarios",
-    icon: UsersIcon,
+    iconSrc: "/assets/icons/sidebar/voluntarios.svg",
   },
   {
     id: "locais-secoes",
     label: "Locais e Seções Eleitorais",
     href: "/cartorio/locais-secoes",
-    icon: PinIcon,
+    iconSrc: "/assets/icons/sidebar/locais-secoes.svg",
   },
   {
     id: "selecao",
     label: "Seleção",
     href: "/cartorio/selecao",
-    icon: TargetIcon,
+    iconSrc: "/assets/icons/sidebar/selecao.svg",
   },
   {
     id: "convocacoes",
     label: "Convocações",
     href: "/cartorio/convocacoes",
-    icon: BellIcon,
+    iconSrc: "/assets/icons/sidebar/convocacoes.svg",
   },
   {
     id: "treinamentos",
     label: "Treinamentos",
     href: "/cartorio/treinamentos",
-    icon: GraduationCapIcon,
+    iconSrc: "/assets/icons/sidebar/treinamentos.svg",
   },
   {
     id: "relatorios",
     label: "Relatórios",
     href: "/cartorio/relatorios",
-    icon: ReportIcon,
+    iconSrc: "/assets/icons/sidebar/relatorios.svg",
   },
   {
     id: "historico",
     label: "Histórico",
     href: "/cartorio/historico",
-    icon: HistoryIcon,
+    iconSrc: "/assets/icons/sidebar/historico.svg",
   },
 ];
