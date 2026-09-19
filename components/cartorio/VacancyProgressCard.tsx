@@ -1,4 +1,5 @@
-import { BrCard } from "@govbr-ds/webcomponents-react/ssr";
+"use client";
+import { BrCard } from "@govbr-ds/webcomponents-react";
 import styles from "./VacancyProgressCard.module.css";
 
 interface VacancyProgressCardProps {

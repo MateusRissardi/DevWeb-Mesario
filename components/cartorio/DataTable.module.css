@@ -46,13 +46,29 @@
 
 .scroller {
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
 }
 
 .table {
   display: block;
   width: 100%;
-  min-width: 44rem;
+  min-width: 55.9375rem;
+}
+
+.scroller::-webkit-scrollbar {
+  height: 0.5rem;
+}
+
+.scroller::-webkit-scrollbar-track {
+  background: var(--gray-05, #f0f0f0);
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--gray-30, #adadad);
 }
 
 .card .table {
@@ -69,6 +85,14 @@
 
 .headerCell::part(content) {
   white-space: nowrap;
+}
+
+.table br-table-header-cell:last-child,
+.table br-table-cell:last-child {
+  box-sizing: border-box;
+  width: 6rem;
+  min-width: 6rem;
+  overflow: visible;
 }
 
 @media (max-width: 48rem) {
