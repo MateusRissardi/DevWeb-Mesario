@@ -1,0 +1,36 @@
+.badge {
+  display: inline-flex;
+  min-width: 87px;
+  min-height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
+  border-radius: 0;
+  box-sizing: border-box;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.red {
+  background-color: #df3030;
+}
+
+.yellow {
+  background-color: #ffbe2e;
+}
+
+.blue {
+  background-color: #2684e8;
+}
+
+.gray {
+  background-color: #c8c8c2;
+}
+
+.green {
+  background-color: #75b82c;
+}
