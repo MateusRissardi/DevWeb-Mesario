@@ -1,0 +1,84 @@
+.root {
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.plain {
+  border-radius: 0;
+}
+
+.card {
+  padding: 0.625rem;
+  border: 1px solid var(--gray-20, #cccccc);
+  border-radius: 0.3125rem;
+}
+
+.titleBar {
+  box-sizing: border-box;
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem 1rem 1.125rem;
+}
+
+.title {
+  margin: 0;
+  color: #000000;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.card .title {
+  color: var(--color-primary-default, #1351b4);
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.scroller {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  display: block;
+  width: 100%;
+  min-width: 44rem;
+}
+
+.card .table {
+  min-width: 26rem;
+}
+
+.table::part(container) {
+  width: 100%;
+}
+
+.footer {
+  padding: 1rem;
+}
+
+.headerCell::part(content) {
+  white-space: nowrap;
+}
+
+@media (max-width: 48rem) {
+  .titleBar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,73 @@
+.card {
+  display: block;
+  width: 100%;
+  min-height: 23.0625rem;
+}
+
+.card::part(wrapper) {
+  box-sizing: border-box;
+  min-height: 23.0625rem;
+  border: 1px solid var(--gray-20, #cccccc);
+  border-radius: 0.3125rem;
+  box-shadow: none;
+}
+
+.card::part(content) {
+  padding: 1rem 0.625rem;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.title {
+  margin: 0 0 1.25rem;
+  color: var(--color-primary-default, #1351b4);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.list {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3125rem;
+  margin: 0;
+}
+
+.itemTitle {
+  margin: 0;
+  color: var(--gray-50, #76766a);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.description {
+  margin: 0;
+  color: var(--gray-50, #76766a);
+  font-size: 0.75rem;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.action {
+  margin-top: 0.0625rem;
+}
+
+.action::part(button) {
+  min-height: 2rem;
+  padding-right: 0.625rem;
+  padding-left: 0.625rem;
+  font-size: 0.75rem;
+}
