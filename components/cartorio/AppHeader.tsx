@@ -41,13 +41,6 @@ export default function AppHeader({
             alt=""
             aria-hidden="true"
           />
-          <span className={styles.logoText}>
-            Tribunal
-            <br />
-            Superior
-            <br />
-            Eleitoral
-          </span>
 
           <span className={styles.divider} aria-hidden="true" />
 

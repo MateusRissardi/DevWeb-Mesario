@@ -13,6 +13,11 @@
 .content {
   flex: 1;
   min-width: 0;
-  padding: 1.5rem 2rem;
+  padding: 1.5rem;
   background-color: #f4f6f8;
+  transition: padding-left 200ms ease;
+}
+
+.body > aside[inert] + .content {
+  padding-left: 2.5rem;
 }
