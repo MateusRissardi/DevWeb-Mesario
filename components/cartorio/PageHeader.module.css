@@ -38,3 +38,17 @@
 .description {
   margin: 0;
 }
+
+.heading {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+@media (max-width: 48rem) {
+  .heading {
+    flex-direction: column;
+  }
+}
