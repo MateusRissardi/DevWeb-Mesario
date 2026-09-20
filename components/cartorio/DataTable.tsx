@@ -15,6 +15,7 @@ import styles from "./DataTable.module.css";
 type ColumnWidth = "content" | "fill" | `${number}fr` | `${number}px`;
 type Alignment = "start" | "center" | "end";
 type Density = "small" | "medium" | "large";
+type TableOverflow = "truncate" | "wrap";
 
 export interface DataTableColumn<T> {
     key: string;
@@ -31,9 +32,11 @@ interface DataTableProps<T> {
     rows: readonly T[];
     getRowKey: (row: T) => string | number;
     headerActions?: ReactNode;
+    headerContent?: ReactNode;
     footer?: ReactNode;
     variant?: "plain" | "card";
     density?: Density;
+    overflow?: TableOverflow;
 }
 
 export default function DataTable<T>({
@@ -42,9 +45,11 @@ export default function DataTable<T>({
     rows,
     getRowKey,
     headerActions,
+    headerContent,
     footer,
     variant = "plain",
     density = "medium",
+    overflow = "truncate",
 }: Readonly<DataTableProps<T>>) {
     const rootClassName = [
         styles.root,
@@ -61,19 +66,26 @@ export default function DataTable<T>({
                 ) : null}
             </header>
 
+            {headerContent ? (
+                <div className={styles.headerContent}>
+                    {headerContent}
+                </div>
+            ) : null}
+
             <div className={styles.scroller}>
                 <BrTable
                     className={styles.table}
                     density={density}
                     dividerStyle="solid"
                     rowDivider
-                    overflow="truncate"
+                    overflow={overflow}
                     tooltipMode="enabled"
                 >
                     <BrTableHeader slot="header">
                         {columns.map((column) => (
                             <BrTableHeaderCell
                                 key={column.key}
+                                overflow={overflow}
                                 className={styles.headerCell}
                                 columnWidth={column.columnWidth ?? "fill"}
                                 horizontalAlignment={
