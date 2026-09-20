@@ -1,0 +1,155 @@
+.search {
+  display: block;
+  width: 24.0625rem;
+  max-width: 100%;
+  flex: 0 0 24.0625rem;
+}
+
+.search::part(group) {
+  width: 100%;
+}
+
+.search::part(container) {
+  width: 100%;
+  border-radius: 0.5rem;
+  background-color: #f8f8f8;
+}
+
+.search::part(input) {
+  min-width: 0;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.search::part(action) {
+  flex: 0 0 2rem;
+}
+
+.searchButton {
+  display: block;
+  width: 2rem;
+  height: 2rem;
+}
+
+.searchButton::part(button) {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
+}
+
+.filterButton::part(button) {
+  display: inline-flex;
+  min-width: 6.5rem;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-inline: 1rem;
+  border-radius: 0.3125rem;
+}
+
+.filterCount {
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #000000;
+  background-color: #ffffff;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.moreButton {
+  display: block;
+  width: 2rem;
+  height: 2rem;
+}
+
+.moreButton::part(button) {
+  width: 2rem;
+  height: 2rem;
+  min-height: 2rem;
+  padding: 0;
+}
+
+.filterTag {
+  display: inline-flex;
+  height: 1.1875rem;
+  align-items: center;
+  gap: 0.25rem;
+  padding-left: 0.5rem;
+  color: #ffffff;
+  background-color: #c6cace;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.removeFilterButton {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-block: -0.28125rem;
+}
+
+.removeFilterButton::part(button) {
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0;
+  color: #ffffff;
+  background-color: transparent;
+}
+
+.badge {
+  min-width: 4rem;
+  min-height: 1.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.actionCell {
+  display: flex;
+  width: 100%;
+  min-width: 4rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionButton {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-inline: auto;
+}
+
+.actionButton::part(button) {
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--color-primary-default, #1351b4);
+}
+
+@media (max-width: 64rem) {
+  .search {
+    width: min(24.0625rem, 100%);
+    flex-basis: min(24.0625rem, 100%);
+  }
+}
+
+@media (max-width: 48rem) {
+  .search {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}

@@ -40,7 +40,10 @@
 
 .actions {
   display: flex;
+  min-width: 0;
+  flex: 1;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.625rem;
 }
 
@@ -93,6 +96,16 @@
   width: 6rem;
   min-width: 6rem;
   overflow: visible;
+}
+
+.headerContent {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0 1rem 0.75rem 1.125rem;
 }
 
 @media (max-width: 48rem) {
