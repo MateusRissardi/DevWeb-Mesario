@@ -1,4 +1,5 @@
 "use client";
+
 import type { ReactNode } from "react";
 
 import {
@@ -74,6 +75,19 @@ export default function DataTable<T>({
 
             <div className={styles.scroller}>
                 <BrTable
+                    ref={(element) => {
+                        if (!element) {
+                            return;
+                        }
+
+                        Object.assign(element, {
+                            dividerStyle: "solid",
+                            rowDivider: true,
+                            density,
+                            overflow,
+                            tooltipMode: "enabled",
+                        });
+                    }}
                     className={styles.table}
                     density={density}
                     dividerStyle="solid"
@@ -84,6 +98,18 @@ export default function DataTable<T>({
                     <BrTableHeader slot="header">
                         {columns.map((column) => (
                             <BrTableHeaderCell
+                                ref={(element) => {
+                                    if (!element) {
+                                        return;
+                                    }
+
+                                    Object.assign(element, {
+                                        columnWidth: column.columnWidth ?? "fill",
+                                        horizontalAlignment:
+                                            column.horizontalAlignment ?? "start",
+                                        overflow,
+                                    });
+                                }}
                                 key={column.key}
                                 overflow={overflow}
                                 className={styles.headerCell}
