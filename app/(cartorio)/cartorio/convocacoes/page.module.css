@@ -1,0 +1,37 @@
+.page {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.headingRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.prepareButton {
+    display: inline-block;
+    width: max-content;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-self: flex-start;
+}
+
+.prepareButton::part(button) {
+    width: auto;
+    min-width: 10.875rem;
+    height: 2rem;
+    min-height: 2rem;
+    padding-inline: 1rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 48rem) {
+    .headingRow {
+        flex-direction: column;
+    }
+}

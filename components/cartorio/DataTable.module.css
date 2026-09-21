@@ -50,15 +50,14 @@
 .scroller {
   width: 100%;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
-  overscroll-behavior-x: contain;
 }
 
 .table {
   display: block;
   width: 100%;
-  min-width: 55.9375rem;
+  min-width: 0;
 }
 
 .scroller::-webkit-scrollbar {
@@ -87,15 +86,9 @@
 }
 
 .headerCell::part(content) {
-  white-space: nowrap;
-}
-
-.table br-table-header-cell:last-child,
-.table br-table-cell:last-child {
-  box-sizing: border-box;
-  width: 6rem;
-  min-width: 6rem;
   overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .headerContent {
@@ -106,6 +99,17 @@
   align-items: center;
   gap: 0.3125rem;
   padding: 0 1rem 0.75rem 1.125rem;
+}
+
+@media (max-width: 64rem) {
+  .scroller {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .table {
+    min-width: 48rem;
+  }
 }
 
 @media (max-width: 48rem) {

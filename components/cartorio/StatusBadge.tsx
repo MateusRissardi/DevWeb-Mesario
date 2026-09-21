@@ -17,11 +17,14 @@ export enum StatusBadgeType {
 	LocalCompleto = 12,
 	LocalAtencao = 13,
 	LocalCritico = 14,
+	ConvocacaoNaoEnviada = 15,
+	ConvocacaoCienciaConfirmada = 16,
+	ConvocacaoFalha = 17,
 }
 
 type StatusBadgeDefinition = {
 	label: string;
-	color: "red" | "yellow" | "blue" | "gray" | "green";
+	color: "red" | "yellow" | "orange" | "blue" | "gray" | "green";
 };
 
 const statusBadgeDefinitions: Record<StatusBadgeType, StatusBadgeDefinition> = {
@@ -34,14 +37,14 @@ const statusBadgeDefinitions: Record<StatusBadgeType, StatusBadgeDefinition> = {
 	[StatusBadgeType.ManifestacaoApta]: { label: "Apta", color: "green" },
 	[StatusBadgeType.ManifestacaoEmAnalise]: { label: "Em análise", color: "blue" },
 	[StatusBadgeType.VoluntarioDisponivel]: { label: "Disponível", color: "gray" },
-	[StatusBadgeType.VoluntarioPreSelecionado]: {
-		label: "Pré-selecionado",
-		color: "green",
-	},
+	[StatusBadgeType.VoluntarioPreSelecionado]: { label: "Pré-selecionado", color: "green",},
 	[StatusBadgeType.VoluntarioSelecionada]: { label: "Selecionada", color: "blue" },
 	[StatusBadgeType.LocalCompleto]: { label: "Completo", color: "green" },
 	[StatusBadgeType.LocalAtencao]: { label: "Atenção", color: "yellow" },
 	[StatusBadgeType.LocalCritico]: { label: "Crítico", color: "red" },
+	[StatusBadgeType.ConvocacaoNaoEnviada]: { label: "Não enviada", color: "orange",},
+	[StatusBadgeType.ConvocacaoCienciaConfirmada]: { label: "Ciência confirmada", color: "green",},
+	[StatusBadgeType.ConvocacaoFalha]: { label: "Falha", color: "red",},
 };
 
 export type StatusBadgeProps = Omit<HTMLAttributes<HTMLSpanElement>, "children"> & {
