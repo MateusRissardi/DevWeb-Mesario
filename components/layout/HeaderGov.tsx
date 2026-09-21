@@ -1,31 +1,34 @@
-import {
-  BrHeader,
-  BrHeaderLogo,
-} from "@govbr-ds/webcomponents-react/ssr";
+import Link from "next/link";
 
 import AccessibilityBar from "./AccessibilityBar";
 import styles from "./HeaderGov.module.css";
 
+/*
+ * Cabeçalho em HTML simples, e não o <br-header> do gov.br: o web component
+ * mantém o logo com `hidden` até terminar a própria hidratação (observers de
+ * breakpoint), então o link para a home podia não aparecer em algumas telas.
+ */
 export default function HeaderGov() {
   return (
     <>
       <AccessibilityBar />
 
-      <BrHeader
-        className={styles.header}
-        density="small"
-        layoutWidth="full"
-      >
-        <BrHeaderLogo
-          slot="logo"
-          src="/assets/tse-logo.svg"
-          description="Tribunal Superior Eleitoral"
+      <header className={styles.header}>
+        <Link
+          className={styles.logoLink}
           href="/"
-          width="105px"
-          height="44px"
-        />
+          aria-label="Tribunal Superior Eleitoral - Ir para a página inicial"
+        >
+          <img
+            className={styles.logo}
+            src="/assets/tse-logo.svg"
+            alt=""
+            width={105}
+            height={44}
+          />
+        </Link>
 
-        <div className={styles.actions} slot="functions">
+        <div className={styles.actions}>
           <button
             className={styles.iconButton}
             type="button"
@@ -53,14 +56,7 @@ export default function HeaderGov() {
             />
           </button>
         </div>
-
-        {/* Impede o BrHeader de gerar o botão de menu padrão */}
-        <span
-          slot="menu-trigger"
-          hidden
-          aria-hidden="true"
-        />
-      </BrHeader>
+      </header>
     </>
   );
 }

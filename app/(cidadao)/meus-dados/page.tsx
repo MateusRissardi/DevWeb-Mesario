@@ -1,3 +1,5 @@
-export default function NomeDaPagina() {
-  return <div>Página em construção</div>;
+import MeusDados from "@/components/cidadao/MeusDados";
+
+export default function MeusDadosPage() {
+  return <MeusDados />;
 }

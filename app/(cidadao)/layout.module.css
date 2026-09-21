@@ -1,0 +1,21 @@
+.main {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100vh - 8rem);
+  padding: 0 0.5rem 2rem;
+  background-color: #ffffff;
+}
+
+.container {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 30rem;
+  padding-top: 1.5rem;
+}
+
+@media (min-width: 40rem) {
+  .container {
+    padding-top: 3rem;
+  }
+}
