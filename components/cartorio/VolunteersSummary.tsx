@@ -9,24 +9,24 @@ import {
     BrTableRow,
 } from "@govbr-ds/webcomponents-react";
 
-import styles from "./ManifestationsSummary.module.css";
+import styles from "./VolunteersSummary.module.css";
 
 const defaultSummaryItems = [
     {
-        label: "Todas",
-        value: 35,
+        label: "Todos aptos",
+        value: 986,
     },
     {
-        label: "Críticas",
-        value: 4,
+        label: "Disponíveis",
+        value: 674,
     },
     {
-        label: "Atenção",
-        value: 23,
+        label: "Pré-selecionados",
+        value: 118,
     },
     {
-        label: "Informativas",
-        value: 8,
+        label: "Selecionados",
+        value: 194,
     },
 ] as const;
 
@@ -35,15 +35,15 @@ export interface SummaryItem {
     value: number;
 }
 
-interface ManifestationsSummaryProps {
+interface VolunteersSummaryProps {
     items?: readonly SummaryItem[];
     ariaLabel?: string;
 }
 
-export default function ManifestationsSummary({
+export default function VolunteersSummary({
     items = defaultSummaryItems,
-    ariaLabel = "Resumo das manifestações",
-}: Readonly<ManifestationsSummaryProps>) {
+    ariaLabel = "Resumo dos voluntários",
+}: Readonly<VolunteersSummaryProps>) {
     return (
         <section
             className={styles.root}
