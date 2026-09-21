@@ -1,0 +1,55 @@
+.box {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  color: #333333;
+  background-color: #d4e5ff;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+
+.icon {
+  margin-top: 0.125rem;
+  color: #1351b4;
+  font-size: 0.75rem;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* O CSS global do gov.br dá tamanho próprio a <p>; aqui ele herda o do aviso. */
+.body p {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.body ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.title {
+  font-weight: 700;
+}
+
+.close {
+  align-self: start;
+  padding: 0 0.125rem;
+  border: 0;
+  color: #1351b4;
+  background: transparent;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.close:focus-visible {
+  outline: 3px solid #ffcd07;
+  outline-offset: 2px;
+}

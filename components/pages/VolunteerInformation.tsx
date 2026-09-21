@@ -25,7 +25,7 @@ export default function VolunteerInformation() {
 
       <Link
         className={styles.portalButton}
-        href="/login"
+        href="/portal"
       >
         Portal do Mesário
       </Link>

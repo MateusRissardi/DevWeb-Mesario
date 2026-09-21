@@ -1,5 +1,31 @@
-.header::part(bottom) {
-  display: none;
+.header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgb(51 51 51 / 0.15);
+}
+
+.logoLink {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.25rem;
+}
+
+.logoLink:focus-visible {
+    outline: 3px solid #ffcd07;
+    outline-offset: 2px;
+}
+
+.logo {
+    display: block;
+    width: 6.5625rem;
+    height: 2.75rem;
 }
 
 .iconButton {

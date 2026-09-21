@@ -1,0 +1,77 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background-color: #f8f8f8;
+}
+
+.cancel {
+  color: #1351b4;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cancel:hover {
+  text-decoration: underline;
+}
+
+.arrows {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 2px solid #1351b4;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.back {
+  color: #1351b4;
+  background-color: #ffffff;
+}
+
+.back:hover {
+  background-color: #edf5ff;
+}
+
+.backDisabled {
+  border-color: transparent;
+  color: #c1c1c1;
+  background-color: transparent;
+  cursor: default;
+}
+
+.next {
+  color: #ffffff;
+  background-color: #1351b4;
+}
+
+.next:hover {
+  border-color: #0c326f;
+  background-color: #0c326f;
+}
+
+.next:disabled {
+  border-color: #a6c2ec;
+  background-color: #a6c2ec;
+  cursor: not-allowed;
+}
+
+.cancel:focus-visible,
+.arrow:focus-visible {
+  outline: 3px solid #ffcd07;
+  outline-offset: 2px;
+}
