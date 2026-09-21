@@ -27,8 +27,8 @@ const manifestations: readonly Volunteers[] = [
         id: 1,
         person: "Ana Silva",
         voteLocation: "EEB João XXIII",
-        experience: "Portal",
-        interest: "Hoje, 16:67",
+        experience: "Presidente - 2014",
+        interest: "Ativo",
         situation: StatusBadgeType.ManifestacaoNova,
         contact: "Completo",
     },
@@ -36,8 +36,8 @@ const manifestations: readonly Volunteers[] = [
         id: 2,
         person: "João Costa",
         voteLocation: "E.M.C.S.",
-        experience: "Presencial",
-        interest: "Hoje, 09:42",
+        experience: "Mesário - 2 eleições",
+        interest: "Ativo",
         situation: StatusBadgeType.ManifestacaoApta,
         contact: "Sem e-mail",
     },
@@ -45,8 +45,8 @@ const manifestations: readonly Volunteers[] = [
         id: 3,
         person: "Maria Pereira",
         voteLocation: "EEB Central",
-        experience: "e-Título",
-        interest: "Ontem",
+        experience: "Sem experiência",
+        interest: "Ativo",
         situation: StatusBadgeType.ManifestacaoEmAnalise,
         contact: "Completo",
     },
@@ -126,8 +126,8 @@ export default function VolunteersTable() {
             }
             headerContent={
                 <>
-                    <FilterTag label="Origem: Presencial" />
-                    <FilterTag label="Situação: Nova" />
+                    <FilterTag label="Seleção: Disponível" />
+                    <FilterTag label="Experiência: Presidente" />
                     <FilterTag label="Local: EEB João XXIII" />
                 </>
             }

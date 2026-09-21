@@ -16,10 +16,10 @@ export default function VoluntariosPage() {
       <VolunteersSummary
         ariaLabel="Resumo dos voluntários"
         items={[
-          { label: "Todas", value: 1284 },
-          { label: "Novas", value: 184 },
-          { label: "Em análise", value: 28 },
-          { label: "Aptas", value: 986 },
+          { label: "Todos aptos", value: 986 },
+          { label: "Disponíveis", value: 674 },
+          { label: "Pré-selecionados", value: 118 },
+          { label: "Selecionados", value: 194 },
         ]}
       />
       <VolunteersTable />
