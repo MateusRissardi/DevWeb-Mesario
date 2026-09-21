@@ -1,3 +1,5 @@
-export default function NomeDaPagina() {
-  return <div>Página em construção</div>;
+import LocationsSectionsFlow from "@/components/cartorio/LocationsSectionsFlow";
+
+export default function LocaisSecoesPage() {
+  return <LocationsSectionsFlow />;
 }
