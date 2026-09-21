@@ -1,0 +1,38 @@
+.root {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+.scroller {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.table {
+  display: block;
+  width: 100%;
+  min-width: 40rem;
+}
+
+.table::part(container) {
+  width: 100%;
+}
+
+.headerCell::part(content) {
+  color: var(--color-primary-default, #1351b4);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.value {
+  color: #000000;
+  font-size: 0.875rem;
+  font-weight: 400;
+  white-space: nowrap;
+}

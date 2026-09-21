@@ -1,6 +1,5 @@
 import PageHeader from "@/components/cartorio/PageHeader";
 import ManifestacoesTable from "@/components/cartorio/ManifestationsTable";
-import PendingSummary from "@/components/cartorio/PendingSummary";
 
 import { BrButton } from "@govbr-ds/webcomponents-react";
 
