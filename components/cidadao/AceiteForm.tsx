@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { somenteDigitos } from "@/lib/cidadao/formatadores";
 import { atualizarSessao, useSessaoComContato } from "@/lib/cidadao/sessao";
 
 import { CheckboxField } from "./Field";
@@ -16,24 +17,65 @@ export default function AceiteForm() {
   const router = useRouter();
   const sessao = useSessaoComContato();
   const [aceito, setAceito] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
 
   if (!sessao) {
     return null;
   }
 
-  function enviar(evento: FormEvent<HTMLFormElement>) {
+  async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
-    if (!aceito) {
+    if (!aceito || salvando || !sessao) {
       return;
     }
 
-    atualizarSessao((atual) => ({
-      ...atual,
-      interesse: { status: "ativo", desde: new Date().toISOString() },
-    }));
+    setSalvando(true);
+    setErro("");
 
-    router.push("/cadastro/sucesso");
+    try {
+      const eleitor = sessao.eleitor;
+      const [dia, mes, ano] = eleitor.dataNascimento.split("/");
+      const response = await fetch("/api/mesarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cpf: somenteDigitos(eleitor.cpf),
+          titulo_eleitor: somenteDigitos(eleitor.titulo),
+          nome_civil: eleitor.nome,
+          data_nascimento: `${ano}-${mes}-${dia}`,
+          nome_mae: eleitor.nomeMae,
+          nome_pai: eleitor.nomePai || null,
+          municipio: eleitor.municipio,
+          zona_eleitoral: Number(eleitor.zona),
+          secao_eleitoral: Number(eleitor.secao),
+          local_votacao: eleitor.localVotacao,
+          telefone: sessao.contato.telefone,
+          email: sessao.contato.email || null,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || "Não foi possível registrar seu interesse.");
+      }
+
+      atualizarSessao((atual) => ({
+        ...atual,
+        interesse: { status: "ativo", desde: new Date().toISOString() },
+      }));
+
+      router.push("/cadastro/sucesso");
+    } catch (falha) {
+      setErro(
+        falha instanceof Error
+          ? falha.message
+          : "Erro de conexão ao registrar seu interesse. Tente novamente.",
+      );
+    } finally {
+      setSalvando(false);
+    }
   }
 
   return (
@@ -68,6 +110,8 @@ export default function AceiteForm() {
           onSubmit={enviar}
           noValidate
         >
+          {erro && <p className={flow.text} role="alert">{erro}</p>}
+
           <CheckboxField
             id="aceite"
             checked={aceito}
@@ -80,9 +124,9 @@ export default function AceiteForm() {
           <button
             className={flow.primaryButton}
             type="submit"
-            disabled={!aceito}
+            disabled={!aceito || salvando}
           >
-            Sim, quero ser mesário
+            {salvando ? "Registrando..." : "Sim, quero ser mesário"}
           </button>
         </form>
       </section>
@@ -90,7 +134,7 @@ export default function AceiteForm() {
       <WizardNav
         backHref="/cadastro/contato"
         formId={FORM_ID}
-        nextDisabled={!aceito}
+        nextDisabled={!aceito || salvando}
       />
     </>
   );

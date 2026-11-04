@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   dataNascimentoValida,
   formatarData,
+  formatarIdentificador,
   formatarNumeroEleitoral,
   formatarTitulo,
+  somenteDigitos,
   tituloValido,
 } from "@/lib/cidadao/formatadores";
 import {
@@ -39,6 +41,10 @@ export default function DadosEleitorForm() {
 
 function validar(eleitor: Eleitor): Erros {
   const erros: Erros = {};
+
+  if (somenteDigitos(eleitor.cpf).length !== 11) {
+    erros.cpf = "Informe um CPF válido, com 11 dígitos.";
+  }
 
   if (!tituloValido(eleitor.titulo)) {
     erros.titulo = "Informe o número do título com 12 dígitos.";
@@ -116,6 +122,18 @@ function Campos({ eleitorInicial }: Readonly<{ eleitorInicial: Eleitor }>) {
         </h1>
 
         <form id={FORM_ID} className={flow.form} onSubmit={enviar} noValidate>
+          <TextField
+            id="cpf"
+            label="CPF"
+            obrigatorio
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="000.000.000-00"
+            value={eleitor.cpf}
+            erro={erros.cpf}
+            onChange={(e) => alterar("cpf", formatarIdentificador(e.target.value))}
+          />
+
           <TextField
             id="titulo"
             label="Título do eleitor"

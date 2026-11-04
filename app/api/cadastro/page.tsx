@@ -19,7 +19,7 @@ interface Mesario {
   local_votacao: string;
   telefone: string | null;
   email: string | null;
-  status_interesse: string | null;
+  status_interesse: boolean | null;
 }
 
 type DadosMesario = Omit<Mesario, 'status_interesse' | 'zona_eleitoral' | 'secao_eleitoral'> & {
@@ -50,7 +50,7 @@ export default function CadastroMesario() {
   const [formData, setFormData] = useState<DadosMesario>(cadastroVazio);
   const [mesarios, setMesarios] = useState<Mesario[]>([]);
   const [cpfEmEdicao, setCpfEmEdicao] = useState<string | null>(null);
-  const [statusInteresse, setStatusInteresse] = useState('ativo');
+  const [statusInteresse, setStatusInteresse] = useState(true);
   const [mensagem, setMensagem] = useState('');
   const [carregando, setCarregando] = useState(true);
 
@@ -136,7 +136,7 @@ export default function CadastroMesario() {
   function iniciarEdicao(mesario: Mesario) {
     setCpfEmEdicao(mesario.cpf);
     setFormData({ ...cadastroVazio, telefone: mesario.telefone ?? '', email: mesario.email ?? '' });
-    setStatusInteresse(mesario.status_interesse || 'ativo');
+    setStatusInteresse(mesario.status_interesse ?? true);
     setMensagem('');
     document.getElementById('form-mesario')?.scrollIntoView({ behavior: 'smooth' });
   }
@@ -144,7 +144,7 @@ export default function CadastroMesario() {
   function cancelarEdicao() {
     setCpfEmEdicao(null);
     setFormData(cadastroVazio);
-    setStatusInteresse('ativo');
+    setStatusInteresse(true);
   }
 
   async function excluirMesario(cpf: string) {
@@ -186,9 +186,9 @@ export default function CadastroMesario() {
               <TextField id="email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="exemplo@email.com" value={formData.email ?? ''} onChange={handleChange} />
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="status-interesse">Status de interesse</label>
-                <select id="status-interesse" className={styles.select} value={statusInteresse} onChange={(e) => setStatusInteresse(e.target.value)}>
-                  <option value="ativo">Interesse ativo</option>
-                  <option value="desistiu">Retirou o interesse</option>
+                <select id="status-interesse" className={styles.select} value={String(statusInteresse)} onChange={(e) => setStatusInteresse(e.target.value === 'true')}>
+                  <option value="true">Interesse ativo</option>
+                  <option value="false">Retirou o interesse</option>
                 </select>
               </div>
             </>
@@ -239,7 +239,7 @@ export default function CadastroMesario() {
                   <strong>{mesario.nome_civil}</strong>
                   <span>CPF: {mesario.cpf}</span>
                   <span>{mesario.email || 'E-mail não informado'}</span>
-                  <span>Status: {mesario.status_interesse || 'Não informado'}</span>
+                  <span>Status: {mesario.status_interesse === null ? 'Não informado' : mesario.status_interesse ? 'Interesse ativo' : 'Retirou o interesse'}</span>
                 </div>
                 <div className={styles.recordActions}>
                   <button className={styles.iconButton} type="button" onClick={() => iniciarEdicao(mesario)} aria-label={`Editar ${mesario.nome_civil}`} title="Editar">

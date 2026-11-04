@@ -48,17 +48,24 @@ export async function POST(request: Request) {
       RETURNING *;
     `;
 
+    const cpfNormalizado = typeof cpf === 'string' ? cpf.replace(/\D/g, '') : '';
+    if (cpfNormalizado.length !== 11) {
+      return NextResponse.json({ success: false, message: 'Informe um CPF válido' }, { status: 400 });
+    }
+
     const values = [
-      cpf, titulo_eleitor, nome_civil, data_nascimento,
+      cpfNormalizado, titulo_eleitor, nome_civil, data_nascimento,
       nome_mae, nome_pai, municipio, zona_eleitoral,
       secao_eleitoral, local_votacao, telefone, email
     ];
 
     const client = await pool.connect();
-    const result = await client.query(query, values);
-    client.release();
-
-    return NextResponse.json({ success: true, data: result.rows[0] }, { status: 201 });
+    try {
+      const result = await client.query(query, values);
+      return NextResponse.json({ success: true, data: result.rows[0] }, { status: 201 });
+    } finally {
+      client.release();
+    }
   } catch (error: unknown) {
     return NextResponse.json({ success: false, error: mensagemErro(error) }, { status: 500 });
   }
@@ -69,6 +76,11 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     const { cpf, telefone, email, status_interesse } = body;
+    const cpfNormalizado = typeof cpf === 'string' ? cpf.replace(/\D/g, '') : '';
+
+    if (cpfNormalizado.length !== 11 || typeof status_interesse !== 'boolean') {
+      return NextResponse.json({ success: false, message: 'CPF ou status de interesse inválido' }, { status: 400 });
+    }
 
     const query = `
       UPDATE mesarios 
@@ -78,14 +90,16 @@ export async function PUT(request: Request) {
     `;
 
     const client = await pool.connect();
-    const result = await client.query(query, [telefone, email, status_interesse, cpf]);
-    client.release();
+    try {
+      const result = await client.query(query, [telefone, email, status_interesse, cpfNormalizado]);
+      if (result.rows.length === 0) {
+        return NextResponse.json({ success: false, message: 'Mesário não encontrado para atualização' }, { status: 404 });
+      }
 
-    if (result.rows.length === 0) {
-      return NextResponse.json({ success: false, message: 'Mesário não encontrado para atualização' }, { status: 404 });
+      return NextResponse.json({ success: true, data: result.rows[0] }, { status: 200 });
+    } finally {
+      client.release();
     }
-
-    return NextResponse.json({ success: true, data: result.rows[0] }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, error: mensagemErro(error) }, { status: 500 });
   }

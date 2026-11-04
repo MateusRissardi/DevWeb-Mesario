@@ -9,7 +9,7 @@ import {
   identificadorValido,
   somenteDigitos,
 } from "@/lib/cidadao/formatadores";
-import { salvarSessao } from "@/lib/cidadao/sessao";
+import { ELEITOR_VAZIO, salvarSessao } from "@/lib/cidadao/sessao";
 
 import { TextField } from "./Field";
 import flow from "./Flow.module.css";
@@ -58,8 +58,13 @@ export default function IdentificacaoForm({
     }
 
     if (modo === "cadastro") {
-      // Abre uma sessão nova; os dados pessoais são preenchidos na etapa 2.
-      salvarSessao({});
+      const cpf = somenteDigitos(identificador);
+      salvarSessao({
+        eleitor: {
+          ...ELEITOR_VAZIO,
+          cpf: cpf.length === 11 ? formatarIdentificador(cpf) : "",
+        },
+      });
       router.push("/cadastro/confirmacao");
     } else {
       salvarSessao(consultarCadastro());

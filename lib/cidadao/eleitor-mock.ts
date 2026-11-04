@@ -8,6 +8,7 @@ import type { Contato, Eleitor, SessaoCompleta } from "./sessao";
  */
 
 const ELEITOR_MOCK: Eleitor = {
+  cpf: "",
   titulo: "123456789012",
   nome: "João da Silva",
   dataNascimento: "02/03/1987",

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 export interface Eleitor {
+  cpf: string;
   titulo: string;
   nome: string;
   dataNascimento: string;
@@ -26,6 +27,7 @@ export interface Interesse {
 }
 
 export const ELEITOR_VAZIO: Eleitor = {
+  cpf: "",
   titulo: "",
   nome: "",
   dataNascimento: "",
