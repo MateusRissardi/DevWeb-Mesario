@@ -42,3 +42,5 @@ next-env.d.ts
 
 # permite versionar o modelo de variáveis, sem valores
 !.env.example
+
+*.patch
