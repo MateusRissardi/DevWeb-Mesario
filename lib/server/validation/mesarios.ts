@@ -20,6 +20,9 @@ const inteiro = (mensagem: string) =>
     mensagem,
   );
 
+const inteiroPositivo = (mensagem: string) =>
+  inteiro(mensagem).refine((numero) => numero > 0, mensagem);
+
 const texto = (rotulo: string) =>
   z
     .string(`Informe ${rotulo}`)
@@ -42,8 +45,15 @@ const email = z
 /** Campo opcional que aceita ausente, null ou texto vazio, tudo virando null. */
 function opcional<T extends z.ZodType<string>>(esquema: T) {
   return z
-    .union([z.literal(""), z.null(), z.undefined(), esquema])
-    .transform((valor) => (valor === "" || valor === undefined ? null : valor));
+    .union([z.literal(""), z.null(), esquema])
+    .transform((valor) => (valor === "" ? null : valor));
+}
+
+/** Igual a `opcional`, mas a chave pode faltar na requisição (vira null). */
+function opcionalOuAusente<T extends z.ZodType<string>>(esquema: T) {
+  return opcional(esquema)
+    .optional()
+    .transform((valor) => valor ?? null);
 }
 
 export const criarMesarioSchema = z.object({
@@ -55,13 +65,13 @@ export const criarMesarioSchema = z.object({
   nome_civil: texto("o nome completo"),
   data_nascimento: z.iso.date("Informe a data de nascimento no formato AAAA-MM-DD"),
   nome_mae: texto("o nome da mãe"),
-  nome_pai: opcional(texto("o nome do pai")),
+  nome_pai: opcionalOuAusente(texto("o nome do pai")),
   municipio: texto("o município"),
-  zona_eleitoral: inteiro("Informe a zona eleitoral"),
-  secao_eleitoral: inteiro("Informe a seção eleitoral"),
+  zona_eleitoral: inteiroPositivo("Informe a zona eleitoral (maior que zero)"),
+  secao_eleitoral: inteiroPositivo("Informe a seção eleitoral (maior que zero)"),
   local_votacao: texto("o local de votação"),
-  telefone: opcional(telefone),
-  email: opcional(email),
+  telefone: opcionalOuAusente(telefone),
+  email: opcionalOuAusente(email),
 });
 
 export const atualizarMesarioSchema = z

@@ -41,7 +41,7 @@ export const telefoneValido = (valor: string) =>
   [10, 11].includes(somenteDigitos(valor).length);
 
 export const emailValido = (valor: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor);
+  /^[^\s@]+@[^\s@]+\.[^\s@.]{2,}$/.test(valor);
 
 /** Nº do título de eleitor: 12 dígitos agrupados de 4 em 4. */
 export const formatarTitulo = (valor: string) =>

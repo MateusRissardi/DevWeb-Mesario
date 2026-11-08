@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import {
   formatarIdentificador,
+  formatarTitulo,
   identificadorValido,
   somenteDigitos,
 } from "@/lib/cidadao/formatadores";
@@ -37,6 +38,7 @@ export default function IdentificacaoForm({
       eleitor: {
         ...ELEITOR_VAZIO,
         cpf: cpf.length === 11 ? formatarIdentificador(cpf) : "",
+        titulo: cpf.length === 12 ? formatarTitulo(cpf) : "",
       },
     });
     router.push("/cadastro/confirmacao");

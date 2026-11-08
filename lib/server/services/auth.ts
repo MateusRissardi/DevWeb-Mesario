@@ -25,8 +25,10 @@ export interface Falha {
 }
 
 /**
- * Cria uma conta. Sem token, só nasce conta de mesário, ligada a um cadastro
- * existente por CPF e título. Outros papéis exigem um administrador.
+ * Cria uma conta. Sem token, só nasce conta de mesário. Com CPF e título ela já
+ * nasce ligada ao cadastro existente; sem eles, fica sem cadastro e é ligada
+ * quando a pessoa concluir o cadastro de voluntário. Outros papéis exigem
+ * um administrador.
  */
 export async function criarConta(
   entrada: CriarUsuarioEntrada,
@@ -54,7 +56,7 @@ export async function criarConta(
   let mesarioId: number | null = null;
   const { cpf, titulo_eleitor: titulo } = entrada;
 
-  if (papel === "mesario" && (cpf || titulo || !chamador)) {
+  if (papel === "mesario" && (cpf || titulo)) {
     const campos: CamposInvalidos = {};
     if (!cpf) campos.cpf = "Informe o CPF";
     if (!titulo) campos.titulo_eleitor = "Informe o título de eleitor";

@@ -73,6 +73,14 @@ export function salvarAutenticacao(
   gravar({ token, expiraEm, usuario });
 }
 
+/** Guarda o cadastro ligado à conta depois que o mesário conclui o cadastro. */
+export function vincularMesario(mesarioId: number) {
+  const atual = interpretar(lerBruto());
+  if (atual) {
+    gravar({ ...atual, usuario: { ...atual.usuario, mesario_id: mesarioId } });
+  }
+}
+
 /** Encerra o acesso neste navegador: token e dados do cidadão. */
 export function encerrarAcesso() {
   gravar(null);

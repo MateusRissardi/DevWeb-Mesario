@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { autorizar } from "@/lib/server/auth/guard";
+import { autorizar, autorizarOpcional } from "@/lib/server/auth/guard";
 import {
   buscarMesarioPorCpf,
   inserirMesario,
@@ -63,6 +63,8 @@ export async function GET(request: Request) {
 }
 
 // Manifestação de interesse. Pública, como o cadastro do cidadão sempre foi.
+// Se quem envia está logado com uma conta de mesário sem cadastro, a conta é
+// ligada ao novo cadastro.
 export async function POST(request: Request) {
   const entrada = criarMesarioSchema.safeParse(await lerJson(request));
   if (!entrada.success) {
@@ -72,7 +74,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const mesario = await inserirMesario(entrada.data);
+    const chamador = await autorizarOpcional(request);
+    if (!chamador.ok) {
+      return chamador.resposta;
+    }
+
+    const contaDeMesario =
+      chamador.usuario?.papel === "mesario" ? chamador.usuario : null;
+    if (contaDeMesario?.mesario_id != null) {
+      return respostaErro(409, "Sua conta já está ligada a um cadastro");
+    }
+
+    const mesario = await inserirMesario(
+      entrada.data,
+      contaDeMesario?.id ?? null,
+    );
+    if (!mesario) {
+      return respostaErro(409, "Sua conta já está ligada a um cadastro");
+    }
     return NextResponse.json({ data: mesario }, { status: 201 });
   } catch (erro) {
     const { code, constraint } = erro as { code?: string; constraint?: string };

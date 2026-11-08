@@ -13,7 +13,9 @@ const FALHA_REDE: ErroApi = {
 
 /** Destino depois de entrar, conforme o papel. */
 export function destinoDoPapel(usuario: UsuarioLogado): string {
-  return usuario.papel === "mesario" ? "/meus-dados" : "/cartorio";
+  if (usuario.papel !== "mesario") return "/cartorio";
+  // Conta nova, ainda sem cadastro de voluntário: segue para o cadastro.
+  return usuario.mesario_id === null ? "/cadastro/dados" : "/meus-dados";
 }
 
 /** Carrega o cadastro ligado à conta e prepara a sessão das telas do cidadão. */
@@ -56,7 +58,7 @@ export async function entrar(
     };
     salvarAutenticacao(corpo.token, corpo.expira_em, corpo.usuario);
 
-    if (corpo.usuario.papel === "mesario") {
+    if (corpo.usuario.papel === "mesario" && corpo.usuario.mesario_id !== null) {
       const carregou = await carregarCadastro(corpo.usuario);
       if (!carregou) {
         return {
@@ -79,8 +81,8 @@ export async function entrar(
 export async function criarConta(dados: {
   email: string;
   senha: string;
-  cpf: string;
-  titulo_eleitor: string;
+  cpf?: string;
+  titulo_eleitor?: string;
 }): Promise<Resultado<null>> {
   try {
     const resposta = await fetch("/api/usuarios", {

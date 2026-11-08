@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { vincularMesario } from "@/lib/api/auth";
+import { apiFetch } from "@/lib/api/client";
 import { somenteDigitos } from "@/lib/cidadao/formatadores";
 import { atualizarSessao, useSessaoComContato } from "@/lib/cidadao/sessao";
 
@@ -37,9 +39,8 @@ export default function AceiteForm() {
     try {
       const eleitor = sessao.eleitor;
       const [dia, mes, ano] = eleitor.dataNascimento.split("/");
-      const response = await fetch("/api/mesarios", {
+      const response = await apiFetch("/api/mesarios", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cpf: somenteDigitos(eleitor.cpf),
           titulo_eleitor: somenteDigitos(eleitor.titulo),
@@ -58,7 +59,19 @@ export default function AceiteForm() {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(result.erro || result.error || result.message || "Não foi possível registrar seu interesse.");
+        const motivos =
+          result.campos && typeof result.campos === "object"
+            ? Object.values(result.campos as Record<string, string>).join(" ")
+            : "";
+        throw new Error(
+          [result.erro || result.error || result.message || "Não foi possível registrar seu interesse.", motivos]
+            .filter(Boolean)
+            .join(" "),
+        );
+      }
+
+      if (typeof result.data?.id === "number") {
+        vincularMesario(result.data.id);
       }
 
       atualizarSessao((atual) => ({

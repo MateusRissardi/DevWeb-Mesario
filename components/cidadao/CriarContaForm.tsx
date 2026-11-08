@@ -35,8 +35,11 @@ export default function CriarContaForm() {
     const novos: Erros = {};
     if (!email.trim()) novos.email = "Informe o e-mail.";
     if (!senha) novos.senha = "Informe a senha.";
-    if (somenteDigitos(cpf).length !== 11) novos.cpf = "O CPF deve ter 11 dígitos.";
-    if (somenteDigitos(titulo).length !== 12)
+    // CPF e título são opcionais, mas só valem em par: ligam a conta a um cadastro existente.
+    const informouCadastro = !!(cpf || titulo);
+    if (informouCadastro && somenteDigitos(cpf).length !== 11)
+      novos.cpf = "O CPF deve ter 11 dígitos.";
+    if (informouCadastro && somenteDigitos(titulo).length !== 12)
       novos.titulo_eleitor = "O título deve ter 12 dígitos.";
     setErros(novos);
     if (Object.keys(novos).length > 0) return;
@@ -45,8 +48,9 @@ export default function CriarContaForm() {
     const criada = await criarConta({
       email: email.trim(),
       senha,
-      cpf: somenteDigitos(cpf),
-      titulo_eleitor: somenteDigitos(titulo),
+      ...(cpf || titulo
+        ? { cpf: somenteDigitos(cpf), titulo_eleitor: somenteDigitos(titulo) }
+        : {}),
     });
 
     if (!criada.ok) {
@@ -78,31 +82,6 @@ export default function CriarContaForm() {
   return (
     <form id="form-criar-conta" className={flow.form} onSubmit={enviar} noValidate>
       <TextField
-        id="conta-cpf"
-        label="CPF"
-        obrigatorio
-        inputMode="numeric"
-        autoComplete="off"
-        placeholder="000.000.000-00"
-        value={cpf}
-        erro={erros.cpf}
-        onChange={(e) => setCpf(formatarIdentificador(e.target.value))}
-      />
-
-      <TextField
-        id="conta-titulo"
-        label="Nº do título de eleitor"
-        obrigatorio
-        inputMode="numeric"
-        autoComplete="off"
-        placeholder="0000 0000 0000"
-        dica="Usamos CPF e título só para ligar a conta ao seu cadastro de voluntário."
-        value={titulo}
-        erro={erros.titulo_eleitor}
-        onChange={(e) => setTitulo(formatarTitulo(e.target.value))}
-      />
-
-      <TextField
         id="conta-email"
         label="E-mail"
         obrigatorio
@@ -125,6 +104,29 @@ export default function CriarContaForm() {
         value={senha}
         erro={erros.senha}
         onChange={(e) => setSenha(e.target.value)}
+      />
+
+      <TextField
+        id="conta-cpf"
+        label="CPF (opcional)"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="000.000.000-00"
+        value={cpf}
+        erro={erros.cpf}
+        onChange={(e) => setCpf(formatarIdentificador(e.target.value))}
+      />
+
+      <TextField
+        id="conta-titulo"
+        label="Nº do título de eleitor (opcional)"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="0000 0000 0000"
+        dica="Preencha CPF e título só se você já fez o cadastro de voluntário: assim ligamos a conta a ele. Se não fez, deixe em branco e faça o cadastro depois de entrar."
+        value={titulo}
+        erro={erros.titulo_eleitor}
+        onChange={(e) => setTitulo(formatarTitulo(e.target.value))}
       />
 
       {erroGeral && (

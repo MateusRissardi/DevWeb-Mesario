@@ -9,8 +9,9 @@ export default function CriarContaPage() {
       </h1>
 
       <p className={flow.text}>
-        Crie seu acesso para consultar e atualizar sua manifestação de
-        interesse. É preciso já ter feito o cadastro como voluntário.
+        Crie seu acesso com e-mail e senha. Depois de entrar, você faz o
+        cadastro como voluntário. Se já fez o cadastro, informe CPF e título
+        para ligar a conta a ele.
       </p>
 
       <CriarContaForm />

@@ -60,7 +60,7 @@ export async function buscarMesarioPorCpf(
   return resultado.rows[0] ?? null;
 }
 
-export async function inserirMesario(dados: {
+export interface DadosNovoMesario {
   cpf: string;
   titulo_eleitor: string;
   nome_civil: string;
@@ -73,29 +73,64 @@ export async function inserirMesario(dados: {
   local_votacao: string;
   telefone: string | null;
   email: string | null;
-}): Promise<MesarioRegistro> {
-  const resultado = await pool.query<MesarioRegistro>(
-    `INSERT INTO mesarios
-       (cpf, titulo_eleitor, nome_civil, data_nascimento, nome_mae, nome_pai,
-        municipio, zona_eleitoral, secao_eleitoral, local_votacao, telefone, email)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-     RETURNING ${COLUNAS}`,
-    [
-      dados.cpf,
-      dados.titulo_eleitor,
-      dados.nome_civil,
-      dados.data_nascimento,
-      dados.nome_mae,
-      dados.nome_pai,
-      dados.municipio,
-      dados.zona_eleitoral,
-      dados.secao_eleitoral,
-      dados.local_votacao,
-      dados.telefone,
-      dados.email,
-    ],
-  );
-  return resultado.rows[0];
+}
+
+/**
+ * Insere o cadastro. Se `usuarioId` vier (conta de mesário ainda sem cadastro),
+ * liga a conta ao novo cadastro na mesma transação: ou fica tudo, ou nada.
+ * Devolve `null` quando a conta já tinha cadastro (nada é gravado).
+ */
+export async function inserirMesario(
+  dados: DadosNovoMesario,
+  usuarioId: number | null = null,
+): Promise<MesarioRegistro | null> {
+  const cliente = await pool.connect();
+  try {
+    await cliente.query("BEGIN");
+
+    const inserido = await cliente.query<MesarioRegistro>(
+      `INSERT INTO mesarios
+         (cpf, titulo_eleitor, nome_civil, data_nascimento, nome_mae, nome_pai,
+          municipio, zona_eleitoral, secao_eleitoral, local_votacao, telefone, email)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING ${COLUNAS}`,
+      [
+        dados.cpf,
+        dados.titulo_eleitor,
+        dados.nome_civil,
+        dados.data_nascimento,
+        dados.nome_mae,
+        dados.nome_pai,
+        dados.municipio,
+        dados.zona_eleitoral,
+        dados.secao_eleitoral,
+        dados.local_votacao,
+        dados.telefone,
+        dados.email,
+      ],
+    );
+    const mesario = inserido.rows[0];
+
+    if (usuarioId !== null) {
+      const ligado = await cliente.query(
+        `UPDATE usuarios SET mesario_id = $1
+         WHERE id = $2 AND papel = 'mesario' AND mesario_id IS NULL`,
+        [mesario.id, usuarioId],
+      );
+      if ((ligado.rowCount ?? 0) === 0) {
+        await cliente.query("ROLLBACK");
+        return null;
+      }
+    }
+
+    await cliente.query("COMMIT");
+    return mesario;
+  } catch (erro) {
+    await cliente.query("ROLLBACK").catch(() => undefined);
+    throw erro;
+  } finally {
+    cliente.release();
+  }
 }
 
 /** Atualiza só os campos informados. Os nomes das colunas são fixos, nunca vêm da requisição. */
