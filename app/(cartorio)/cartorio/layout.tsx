@@ -1,10 +1,12 @@
+import type { ReactNode } from 'react';
+
 import AppHeader from '@/components/cartorio/AppHeader';
 import Sidebar from '@/components/cartorio/Sidebar';
 import { SidebarProvider } from '@/components/cartorio/SidebarContext';
 
 import styles from './layout.module.css';
 
-export default function CartorioLayout({ children }: { children: React.ReactNode }) {
+export default function CartorioLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>          {/* <- precisa envolver TUDO que usa useSidebar */}
       <div className={styles.shell}>

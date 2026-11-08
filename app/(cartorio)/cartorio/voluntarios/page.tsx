@@ -1,8 +1,6 @@
 import PageHeader from "@/components/cartorio/PageHeader";
 import VolunteersTable from "@/components/cartorio/VolunteersTable";
 
-import { BrButton } from "@govbr-ds/webcomponents-react";
-
 import styles from "./page.module.css";
 import VolunteersSummary from "@/components/cartorio/VolunteersSummary";
 

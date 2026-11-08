@@ -11,10 +11,6 @@ import MetricCard from "@/components/cartorio/MetricCard";
 
 import PageHeader from "@/components/cartorio/PageHeader";
 
-import StatusBadge, {
-  StatusBadgeType,
-} from "@/components/cartorio/StatusBadge";
-
 import VacancyProgressCard from "@/components/cartorio/VacancyProgressCard";
 
 import RecentManifestationsTable from "@/components/cartorio/RecentManifestationsTable";

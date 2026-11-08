@@ -1,26 +1,3 @@
-import type { ComponentType } from "react";
-
-import {
-  AlertIcon,
-  BellIcon,
-  ChatIcon,
-  GraduationCapIcon,
-  GridIcon,
-  HistoryIcon,
-  PinIcon,
-  ReportIcon,
-  TargetIcon,
-  UsersIcon,
-} from "./SidebarIcons";
-import type { IconProps } from "./SidebarIcons";
-
-export interface SidebarNavItem {
-  id: string;
-  label: string;
-  href: string;
-  iconSrc: string;
-  badge?: number;
-}
 export interface SidebarNavItem {
   id: string;
   label: string;
