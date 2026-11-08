@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { BrButton } from "@govbr-ds/webcomponents-react";
+import { BrButton, BrMessage } from "@govbr-ds/webcomponents-react";
 
 import ConvocationsSummary from "@/components/cartorio/ConvocationsSummary";
 import ConvocationsTable from "@/components/cartorio/ConvocationsTable";
@@ -29,6 +29,12 @@ export default function ConvocacoesPage() {
   if (mode === "prepare") {
     return (
       <>
+        <BrMessage
+          state="warning"
+          showIcon
+          message="O envio de mensagens está desativado nesta versão. As telas servem apenas para registrar e acompanhar o status das convocações; nenhuma mensagem é enviada aos mesários."
+        />
+
         <PrepareConvocations
           onBack={() => setMode("list")}
           onConfirm={(ids) => {
@@ -77,6 +83,12 @@ export default function ConvocacoesPage() {
           Preparar envios
         </BrButton>
       </div>
+
+      <BrMessage
+        state="warning"
+        showIcon
+        message="O envio de mensagens está desativado nesta versão. As telas servem apenas para registrar e acompanhar o status das convocações; nenhuma mensagem é enviada aos mesários."
+      />
 
       <ConvocationsSummary />
 

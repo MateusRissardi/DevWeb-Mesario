@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { useAutenticacao } from "@/lib/api/auth";
+import { apiFetch } from "@/lib/api/client";
 import { descreverZona, mascararTitulo } from "@/lib/cidadao/formatadores";
 import { DIAS_PARA_NOVO_CADASTRO } from "@/lib/cidadao/regras";
 import { atualizarSessao, useSessaoCompleta } from "@/lib/cidadao/sessao";
@@ -23,16 +25,40 @@ function dataParaNovoCadastro(desdeIso: string) {
 export default function MeusDados() {
   const router = useRouter();
   const sessao = useSessaoCompleta();
+  const auth = useAutenticacao();
+  const mesarioId = auth?.usuario.mesario_id ?? null;
   const dialogo = useRef<HTMLDialogElement>(null);
+  const [erro, setErro] = useState("");
 
-  if (!sessao) {
+  useEffect(() => {
+    if (auth === null) {
+      router.replace("/login");
+    }
+  }, [auth, router]);
+
+  if (!sessao || !auth) {
     return null;
   }
 
   const { eleitor, contato, interesse } = sessao;
   const ativo = interesse.status === "ativo";
 
-  function retirarInteresse() {
+  async function retirarInteresse() {
+    setErro("");
+
+    const resposta = await apiFetch(`/api/mesarios/${mesarioId}`, {
+      method: "PUT",
+      body: JSON.stringify({ status_interesse: false }),
+    }).catch(() => null);
+
+    if (!resposta?.ok) {
+      dialogo.current?.close();
+      if (resposta?.status !== 401) {
+        setErro("Não foi possível retirar seu interesse. Tente novamente.");
+      }
+      return;
+    }
+
     atualizarSessao((atual) => ({
       ...atual,
       interesse: { status: "desistiu", desde: new Date().toISOString() },
@@ -83,6 +109,12 @@ export default function MeusDados() {
       >
         Caso seja convocado, você receberá as orientações pelos canais oficiais.
       </StatusCard>
+
+      {erro && (
+        <p className={flow.text} role="alert">
+          {erro}
+        </p>
+      )}
 
       <div className={flow.actions}>
         <Link className={flow.primaryButton} href="/meus-dados/atualizar">

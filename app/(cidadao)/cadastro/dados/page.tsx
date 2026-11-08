@@ -16,11 +16,10 @@ export default function CadastroDadosPage() {
         </h1>
 
         <p className={flow.text}>
-          Para se voluntariar, informe seu CPF ou nº do título e o código de
-          autenticação gerado pelo aplicativo e-Título.
+          Para se voluntariar, informe seu CPF ou nº do título de eleitor.
         </p>
 
-        <IdentificacaoForm id={FORM_ID} modo="cadastro" />
+        <IdentificacaoForm id={FORM_ID} />
       </section>
 
       <WizardNav formId={FORM_ID} />

@@ -1,23 +1,32 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
+import { encerrarAcesso, useAutenticacao } from "@/lib/api/auth";
 import AccessibilityBar from "@/components/layout/AccessibilityBar";
 
 import { useSidebar } from "./SidebarContext";
 import styles from "./AppHeader.module.css";
 
-interface AppHeaderProps {
-  userName?: string;
-  userRole?: string;
-}
+const ROTULO_PAPEL = {
+  mesario: "Mesário",
+  cartorio: "Cartório",
+  administrador: "Administrador",
+} as const;
 
 const ZONA_ATUAL = "Eleições Gerais 2026 · 14ª Zona Eleitoral";
 
-export default function AppHeader({
-  //POR ENQUANTO FIXO (Só PARA TESTES)
-  userName = "Artur",
-  userRole = "Estagiário",
-}: AppHeaderProps) {
+export default function AppHeader() {
   const { isOpen, toggle } = useSidebar();
+  const router = useRouter();
+  const auth = useAutenticacao();
+  const userName = auth?.usuario.email ?? "";
+  const userRole = auth ? ROTULO_PAPEL[auth.usuario.papel] : "";
+
+  function sair() {
+    encerrarAcesso();
+    router.replace("/login");
+  }
 
   return (
     <header className={styles.header}>
@@ -58,9 +67,11 @@ export default function AppHeader({
           <button
             className={styles.moreButton}
             type="button"
-            aria-label="Mais opções"
+            aria-label="Sair"
+            title="Sair"
+            onClick={sair}
           >
-            <i className="fas fa-ellipsis-v" aria-hidden="true" />
+            <i className="fas fa-sign-out-alt" aria-hidden="true" />
           </button>
         </div>
       </div>

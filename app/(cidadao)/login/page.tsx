@@ -1,5 +1,5 @@
 import flow from "@/components/cidadao/Flow.module.css";
-import IdentificacaoForm from "@/components/cidadao/IdentificacaoForm";
+import LoginForm from "@/components/cidadao/LoginForm";
 
 export default function LoginPage() {
   return (
@@ -9,12 +9,11 @@ export default function LoginPage() {
       </h1>
 
       <p className={flow.text}>
-        Para consultar ou atualizar sua manifestação de interesse, informe seu
-        CPF ou nº do título e o código de autenticação gerado pelo aplicativo
-        e-Título.
+        Entre com seu e-mail e senha para consultar ou atualizar sua
+        manifestação de interesse.
       </p>
 
-      <IdentificacaoForm id="form-login" modo="login" botao="Entrar" />
+      <LoginForm />
     </section>
   );
 }

@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { apiFetch, lerErro } from "@/lib/api/client";
+import { useAutenticacao } from "@/lib/api/auth";
 import {
   emailValido,
   formatarTelefone,
@@ -59,8 +61,11 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
   const [whatsapp, setWhatsapp] = useState(contatoInicial?.whatsapp ?? false);
   const [email, setEmail] = useState(contatoInicial?.email ?? "");
   const [erros, setErros] = useState<Erros>({});
+  const [erroGeral, setErroGeral] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const auth = useAutenticacao();
 
-  function enviar(evento: FormEvent<HTMLFormElement>) {
+  async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
     const novosErros: Erros = {};
@@ -80,6 +85,34 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
 
     if (Object.keys(novosErros).length > 0) {
       return;
+    }
+
+    if (modo === "atualizar") {
+      const mesarioId = auth?.usuario.mesario_id;
+      if (mesarioId == null) {
+        setErroGeral("Entre novamente para atualizar seus dados.");
+        return;
+      }
+
+      setSalvando(true);
+      setErroGeral("");
+      const resposta = await apiFetch(`/api/mesarios/${mesarioId}`, {
+        method: "PUT",
+        body: JSON.stringify({ telefone, email: emailLimpo || null }),
+      }).catch(() => null);
+      setSalvando(false);
+
+      if (!resposta?.ok) {
+        if (resposta?.status === 401) return;
+        const falha = resposta ? await lerErro(resposta) : null;
+        setErroGeral(
+          falha?.campos.telefone ??
+            falha?.campos.email ??
+            falha?.mensagem ??
+            "Não foi possível salvar. Tente novamente.",
+        );
+        return;
+      }
     }
 
     atualizarSessao((atual) => ({
@@ -153,10 +186,21 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
           </p>
         </InfoBox>
 
+        {erroGeral && (
+          <p className={flow.text} role="alert">
+            {erroGeral}
+          </p>
+        )}
+
         {modo === "atualizar" && (
           <div className={flow.actions}>
-            <button className={flow.primaryButton} type="submit" form={FORM_ID}>
-              Salvar
+            <button
+              className={flow.primaryButton}
+              type="submit"
+              form={FORM_ID}
+              disabled={salvando}
+            >
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
             <Link className={flow.secondaryButton} href="/meus-dados">
               Cancelar

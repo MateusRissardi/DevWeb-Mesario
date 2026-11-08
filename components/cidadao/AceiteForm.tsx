@@ -58,7 +58,7 @@ export default function AceiteForm() {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(result.error || result.message || "Não foi possível registrar seu interesse.");
+        throw new Error(result.erro || result.error || result.message || "Não foi possível registrar seu interesse.");
       }
 
       atualizarSessao((atual) => ({

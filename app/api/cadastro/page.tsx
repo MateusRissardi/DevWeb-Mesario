@@ -2,11 +2,14 @@
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
+import GuardaAcesso from '@/components/auth/GuardaAcesso';
+import { apiFetch } from '@/lib/api/client';
 import { TextField } from '@/components/cidadao/Field';
 import flow from '@/components/cidadao/Flow.module.css';
 import styles from './CadastroMesario.module.css';
 
 interface Mesario {
+  id: number;
   cpf: string;
   titulo_eleitor: string;
   nome_civil: string;
@@ -22,7 +25,7 @@ interface Mesario {
   status_interesse: boolean | null;
 }
 
-type DadosMesario = Omit<Mesario, 'status_interesse' | 'zona_eleitoral' | 'secao_eleitoral'> & {
+type DadosMesario = Omit<Mesario, 'id' | 'status_interesse' | 'zona_eleitoral' | 'secao_eleitoral'> & {
   zona_eleitoral: string;
   secao_eleitoral: string;
 };
@@ -46,10 +49,10 @@ async function lerResposta(response: Response) {
   return response.json().catch(() => ({}));
 }
 
-export default function CadastroMesario() {
+function CadastroMesario() {
   const [formData, setFormData] = useState<DadosMesario>(cadastroVazio);
   const [mesarios, setMesarios] = useState<Mesario[]>([]);
-  const [cpfEmEdicao, setCpfEmEdicao] = useState<string | null>(null);
+  const [emEdicao, setEmEdicao] = useState<Mesario | null>(null);
   const [statusInteresse, setStatusInteresse] = useState(true);
   const [mensagem, setMensagem] = useState('');
   const [carregando, setCarregando] = useState(true);
@@ -57,9 +60,9 @@ export default function CadastroMesario() {
   async function carregarMesarios() {
     setCarregando(true);
     try {
-      const response = await fetch('/api/mesarios');
+      const response = await apiFetch('/api/mesarios');
       const result = await lerResposta(response);
-      if (!response.ok) throw new Error(result.error || 'Não foi possível carregar os cadastros.');
+      if (!response.ok) throw new Error(result.erro || result.error || 'Não foi possível carregar os cadastros.');
       setMesarios(result.data);
     } catch (error) {
       setMensagem(error instanceof Error ? error.message : 'Erro ao carregar os cadastros.');
@@ -71,10 +74,10 @@ export default function CadastroMesario() {
   useEffect(() => {
     let ativo = true;
 
-    fetch('/api/mesarios')
+    apiFetch('/api/mesarios')
       .then(async (response) => {
         const result = await lerResposta(response);
-        if (!response.ok) throw new Error(result.error || 'Não foi possível carregar os cadastros.');
+        if (!response.ok) throw new Error(result.erro || result.error || 'Não foi possível carregar os cadastros.');
         return result.data as Mesario[];
       })
       .then((data) => {
@@ -105,14 +108,12 @@ export default function CadastroMesario() {
     setMensagem('');
 
     try {
-      const editando = cpfEmEdicao !== null;
-      const response = await fetch('/api/mesarios', {
+      const editando = emEdicao !== null;
+      const response = await apiFetch(editando ? `/api/mesarios/${emEdicao.id}` : '/api/mesarios', {
         method: editando ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
           editando
             ? {
-                cpf: cpfEmEdicao,
                 telefone: formData.telefone,
                 email: formData.email,
                 status_interesse: statusInteresse,
@@ -121,7 +122,7 @@ export default function CadastroMesario() {
         ),
       });
       const result = await lerResposta(response);
-      if (!response.ok) throw new Error(result.error || result.message || 'Não foi possível salvar o cadastro.');
+      if (!response.ok) throw new Error(result.erro || result.error || result.message || 'Não foi possível salvar o cadastro.');
 
       setMensagem(editando ? 'Dados do mesário atualizados.' : 'Mesário cadastrado com sucesso.');
       cancelarEdicao();
@@ -134,7 +135,7 @@ export default function CadastroMesario() {
   }
 
   function iniciarEdicao(mesario: Mesario) {
-    setCpfEmEdicao(mesario.cpf);
+    setEmEdicao(mesario);
     setFormData({ ...cadastroVazio, telefone: mesario.telefone ?? '', email: mesario.email ?? '' });
     setStatusInteresse(mesario.status_interesse ?? true);
     setMensagem('');
@@ -142,21 +143,21 @@ export default function CadastroMesario() {
   }
 
   function cancelarEdicao() {
-    setCpfEmEdicao(null);
+    setEmEdicao(null);
     setFormData(cadastroVazio);
     setStatusInteresse(true);
   }
 
-  async function excluirMesario(cpf: string) {
-    if (!window.confirm(`Excluir o cadastro de CPF ${cpf}? Esta ação não pode ser desfeita.`)) return;
+  async function excluirMesario(alvo: Mesario) {
+    if (!window.confirm(`Excluir o cadastro de CPF ${alvo.cpf}? Esta ação não pode ser desfeita.`)) return;
 
     setCarregando(true);
     setMensagem('');
     try {
-      const response = await fetch(`/api/mesarios?cpf=${encodeURIComponent(cpf)}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/mesarios/${alvo.id}`, { method: 'DELETE' });
       const result = await lerResposta(response);
-      if (!response.ok) throw new Error(result.error || result.message || 'Não foi possível excluir o cadastro.');
-      if (cpfEmEdicao === cpf) cancelarEdicao();
+      if (!response.ok) throw new Error(result.erro || result.error || result.message || 'Não foi possível excluir o cadastro.');
+      if (emEdicao?.id === alvo.id) cancelarEdicao();
       setMensagem('Cadastro excluído com sucesso.');
       await carregarMesarios();
     } catch (error) {
@@ -175,12 +176,12 @@ export default function CadastroMesario() {
 
       <section className={styles.section} aria-labelledby="titulo-formulario">
         <h2 className={flow.sectionTitle} id="titulo-formulario">
-          {cpfEmEdicao ? 'Atualizar dados do mesário' : 'Cadastrar mesário'}
+          {emEdicao ? 'Atualizar dados do mesário' : 'Cadastrar mesário'}
         </h2>
-        {cpfEmEdicao && <p className={flow.text}>CPF: {cpfEmEdicao}. Nesta edição, telefone, e-mail e status podem ser alterados.</p>}
+        {emEdicao && <p className={flow.text}>CPF: {emEdicao.cpf}. Nesta edição, telefone, e-mail e status podem ser alterados.</p>}
 
         <form id="form-mesario" className={flow.form} onSubmit={handleSubmit}>
-          {cpfEmEdicao ? (
+          {emEdicao ? (
             <>
               <TextField id="telefone" name="telefone" label="Telefone" type="tel" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.telefone ?? ''} onChange={handleChange} />
               <TextField id="email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="exemplo@email.com" value={formData.email ?? ''} onChange={handleChange} />
@@ -213,9 +214,9 @@ export default function CadastroMesario() {
 
           <div className={flow.actions}>
             <button className={flow.primaryButton} type="submit" disabled={carregando}>
-              {carregando ? 'Salvando...' : cpfEmEdicao ? 'Salvar alterações' : 'Cadastrar mesário'}
+              {carregando ? 'Salvando...' : emEdicao ? 'Salvar alterações' : 'Cadastrar mesário'}
             </button>
-            {cpfEmEdicao && <button className={flow.secondaryButton} type="button" onClick={cancelarEdicao}>Cancelar edição</button>}
+            {emEdicao && <button className={flow.secondaryButton} type="button" onClick={cancelarEdicao}>Cancelar edição</button>}
           </div>
         </form>
       </section>
@@ -234,7 +235,7 @@ export default function CadastroMesario() {
         ) : (
           <ul className={styles.list}>
             {mesarios.map((mesario) => (
-              <li className={styles.record} key={mesario.cpf}>
+              <li className={styles.record} key={mesario.id}>
                 <div className={styles.recordDetails}>
                   <strong>{mesario.nome_civil}</strong>
                   <span>CPF: {mesario.cpf}</span>
@@ -245,7 +246,7 @@ export default function CadastroMesario() {
                   <button className={styles.iconButton} type="button" onClick={() => iniciarEdicao(mesario)} aria-label={`Editar ${mesario.nome_civil}`} title="Editar">
                     <i className="fas fa-pen" aria-hidden="true" />
                   </button>
-                  <button className={`${styles.iconButton} ${styles.deleteButton}`} type="button" onClick={() => void excluirMesario(mesario.cpf)} disabled={carregando} aria-label={`Excluir ${mesario.nome_civil}`} title="Excluir">
+                  <button className={`${styles.iconButton} ${styles.deleteButton}`} type="button" onClick={() => void excluirMesario(mesario)} disabled={carregando} aria-label={`Excluir ${mesario.nome_civil}`} title="Excluir">
                     <i className="fas fa-trash" aria-hidden="true" />
                   </button>
                 </div>
@@ -255,5 +256,13 @@ export default function CadastroMesario() {
         )}
       </section>
     </section>
+  );
+}
+
+export default function CadastroMesarioProtegido() {
+  return (
+    <GuardaAcesso papeis={['cartorio', 'administrador']}>
+      <CadastroMesario />
+    </GuardaAcesso>
   );
 }
