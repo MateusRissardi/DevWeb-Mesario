@@ -1,0 +1,864 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..64283fa
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,12 @@
++# Copie para .env.local e preencha. Nunca versione valores reais.
++
++# Conexão Postgres do Supabase
++DATABASE_URL=
++
++# Segredo do JWT: ao menos 32 caracteres aleatórios.
++# Gere com: openssl rand -base64 48
++JWT_SECRET=
++
++# Só para scripts/criar-admin.mjs. Remova do .env.local depois de usar.
++ADMIN_EMAIL=
++ADMIN_SENHA=
+diff --git a/.gitignore b/.gitignore
+index 5ef6a52..e78ad11 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -39,3 +39,6 @@ yarn-error.log*
+ # typescript
+ *.tsbuildinfo
+ next-env.d.ts
++
++# permite versionar o modelo de variáveis, sem valores
++!.env.example
+diff --git a/app/api/login/route.ts b/app/api/login/route.ts
+new file mode 100644
+index 0000000..7aeb054
+--- /dev/null
++++ b/app/api/login/route.ts
+@@ -0,0 +1,47 @@
++import { NextResponse } from "next/server";
++
++import {
++  ipDaRequisicao,
++  lerJson,
++  registrarErro,
++  respostaErro,
++} from "@/lib/server/http";
++import { autenticar } from "@/lib/server/services/auth";
++import { camposDoErro, loginSchema } from "@/lib/server/validation/usuarios";
++
++export async function POST(request: Request) {
++  const entrada = loginSchema.safeParse(await lerJson(request));
++  if (!entrada.success) {
++    return respostaErro(400, "Dados inválidos", {
++      campos: camposDoErro(entrada.error),
++    });
++  }
++
++  try {
++    const resultado = await autenticar(
++      entrada.data.email,
++      entrada.data.senha,
++      ipDaRequisicao(request),
++    );
++
++    if (!resultado.ok) {
++      return respostaErro(resultado.status, resultado.erro, {
++        headers: resultado.retryAfterSegundos
++          ? { "Retry-After": String(resultado.retryAfterSegundos) }
++          : undefined,
++      });
++    }
++
++    return NextResponse.json(
++      {
++        token: resultado.token,
++        expira_em: resultado.expiraEm,
++        usuario: resultado.usuario,
++      },
++      { status: 200, headers: { "Cache-Control": "no-store" } },
++    );
++  } catch (erro) {
++    registrarErro("login", erro);
++    return respostaErro(500, "Erro interno");
++  }
++}
+diff --git a/app/api/usuarios/me/route.ts b/app/api/usuarios/me/route.ts
+new file mode 100644
+index 0000000..8f5bb23
+--- /dev/null
++++ b/app/api/usuarios/me/route.ts
+@@ -0,0 +1,19 @@
++import { NextResponse } from "next/server";
++
++import { autorizar } from "@/lib/server/auth/guard";
++import { registrarErro, respostaErro } from "@/lib/server/http";
++
++// Dados da conta de quem está logado. Qualquer papel, desde que haja token.
++export async function GET(request: Request) {
++  try {
++    const acesso = await autorizar(request);
++    if (!acesso.ok) {
++      return acesso.resposta;
++    }
++
++    return NextResponse.json({ usuario: acesso.usuario });
++  } catch (erro) {
++    registrarErro("usuario-atual", erro);
++    return respostaErro(500, "Erro interno");
++  }
++}
+diff --git a/app/api/usuarios/route.ts b/app/api/usuarios/route.ts
+new file mode 100644
+index 0000000..497aa6e
+--- /dev/null
++++ b/app/api/usuarios/route.ts
+@@ -0,0 +1,55 @@
++import { NextResponse } from "next/server";
++
++import { autorizar, autorizarOpcional } from "@/lib/server/auth/guard";
++import { listarPublicos } from "@/lib/server/db/usuarios";
++import { lerJson, registrarErro, respostaErro } from "@/lib/server/http";
++import { criarConta } from "@/lib/server/services/auth";
++import {
++  camposDoErro,
++  criarUsuarioSchema,
++} from "@/lib/server/validation/usuarios";
++
++// Cadastro de conta. Pública para contas de mesário (com CPF e título de um
++// cadastro existente); qualquer outro papel exige um administrador.
++export async function POST(request: Request) {
++  const entrada = criarUsuarioSchema.safeParse(await lerJson(request));
++  if (!entrada.success) {
++    return respostaErro(400, "Dados inválidos", {
++      campos: camposDoErro(entrada.error),
++    });
++  }
++
++  try {
++    const chamador = await autorizarOpcional(request);
++    if (!chamador.ok) {
++      return chamador.resposta;
++    }
++
++    const resultado = await criarConta(entrada.data, chamador.usuario);
++    if (!resultado.ok) {
++      return respostaErro(resultado.status, resultado.erro, {
++        campos: resultado.campos,
++      });
++    }
++
++    return NextResponse.json({ usuario: resultado.usuario }, { status: 201 });
++  } catch (erro) {
++    registrarErro("criar-usuario", erro);
++    return respostaErro(500, "Erro interno");
++  }
++}
++
++// Lista as contas. Só administrador.
++export async function GET(request: Request) {
++  try {
++    const acesso = await autorizar(request, { papeis: ["administrador"] });
++    if (!acesso.ok) {
++      return acesso.resposta;
++    }
++
++    return NextResponse.json({ usuarios: await listarPublicos() });
++  } catch (erro) {
++    registrarErro("listar-usuarios", erro);
++    return respostaErro(500, "Erro interno");
++  }
++}
+diff --git a/lib/server/auth/guard.ts b/lib/server/auth/guard.ts
+new file mode 100644
+index 0000000..9ba71c6
+--- /dev/null
++++ b/lib/server/auth/guard.ts
+@@ -0,0 +1,74 @@
++import type { NextResponse } from "next/server";
++
++import { buscarPublicoPorId } from "@/lib/server/db/usuarios";
++import { respostaErro } from "@/lib/server/http";
++
++import type { Papel, UsuarioPublico } from "./tipos";
++import { verificarToken } from "./token";
++
++export type ResultadoAutorizacao =
++  | { ok: true; usuario: UsuarioPublico }
++  | { ok: false; resposta: NextResponse };
++
++export type ResultadoAutorizacaoOpcional =
++  | { ok: true; usuario: UsuarioPublico | null }
++  | { ok: false; resposta: NextResponse };
++
++function naoAutenticado(mensagem: string): {
++  ok: false;
++  resposta: NextResponse;
++} {
++  return {
++    ok: false,
++    resposta: respostaErro(401, mensagem, {
++      headers: { "WWW-Authenticate": "Bearer" },
++    }),
++  };
++}
++
++async function usuarioDoToken(
++  cabecalho: string,
++): Promise<UsuarioPublico | null> {
++  const partes = /^Bearer\s+(\S+)$/i.exec(cabecalho.trim());
++  const id = partes ? await verificarToken(partes[1]) : null;
++  return id === null ? null : buscarPublicoPorId(id);
++}
++
++/**
++ * Exige token válido (401 se faltar, for inválido ou tiver expirado) e,
++ * se informado, um dos papéis permitidos (403 se o papel não bastar).
++ * O papel vem do banco a cada requisição, não do token.
++ */
++export async function autorizar(
++  request: Request,
++  opcoes: { papeis?: readonly Papel[] } = {},
++): Promise<ResultadoAutorizacao> {
++  const cabecalho = request.headers.get("authorization");
++  if (!cabecalho) {
++    return naoAutenticado("Autenticação necessária");
++  }
++
++  const usuario = await usuarioDoToken(cabecalho);
++  if (!usuario) {
++    return naoAutenticado("Token inválido ou expirado");
++  }
++
++  if (opcoes.papeis && !opcoes.papeis.includes(usuario.papel)) {
++    return {
++      ok: false,
++      resposta: respostaErro(403, "Sem permissão para esta ação"),
++    };
++  }
++
++  return { ok: true, usuario };
++}
++
++/** Como autorizar, mas sem token a requisição segue como anônima. Token presente e inválido continua sendo 401. */
++export async function autorizarOpcional(
++  request: Request,
++): Promise<ResultadoAutorizacaoOpcional> {
++  if (!request.headers.get("authorization")) {
++    return { ok: true, usuario: null };
++  }
++  return autorizar(request);
++}
+diff --git a/lib/server/auth/senha.ts b/lib/server/auth/senha.ts
+new file mode 100644
+index 0000000..67a6e85
+--- /dev/null
++++ b/lib/server/auth/senha.ts
+@@ -0,0 +1,22 @@
++import bcrypt from "bcryptjs";
++
++// Custo do bcrypt. A exigência é 10 ou mais.
++const CUSTO = 12;
++
++// Hash de uma senha aleatória que ninguém conhece. Serve para gastar o mesmo
++// tempo quando o e-mail não existe, para a resposta não revelar se a conta existe.
++const HASH_FICTICIO =
++  "$2b$12$uyKo2RyCu6ZOR/oxj2M3IOkcYmscLMK.gCclwi4gPlJWMB.jgLTMq";
++
++export function gerarHash(senha: string): Promise<string> {
++  return bcrypt.hash(senha, CUSTO);
++}
++
++/** Confere a senha com bcrypt.compare. Se não houver hash, compara com o fictício e devolve false. */
++export async function conferirSenha(
++  senha: string,
++  hash: string | null | undefined,
++): Promise<boolean> {
++  const confere = await bcrypt.compare(senha, hash ?? HASH_FICTICIO);
++  return hash != null && confere;
++}
+diff --git a/lib/server/auth/tipos.ts b/lib/server/auth/tipos.ts
+new file mode 100644
+index 0000000..5cf6074
+--- /dev/null
++++ b/lib/server/auth/tipos.ts
+@@ -0,0 +1,12 @@
++export const PAPEIS = ["mesario", "cartorio", "administrador"] as const;
++
++export type Papel = (typeof PAPEIS)[number];
++
++/** Dados da conta que podem sair do servidor. Nunca inclui a senha nem o hash. */
++export interface UsuarioPublico {
++  id: number;
++  email: string;
++  papel: Papel;
++  mesario_id: number | null;
++  criado_em: Date;
++}
+diff --git a/lib/server/auth/token.ts b/lib/server/auth/token.ts
+new file mode 100644
+index 0000000..906b5aa
+--- /dev/null
++++ b/lib/server/auth/token.ts
+@@ -0,0 +1,41 @@
++import { SignJWT, jwtVerify } from "jose";
++
++const EXPIRACAO_SEGUNDOS = 60 * 60;
++const EMISSOR = "portal-mesario";
++
++function segredo(): Uint8Array {
++  const valor = process.env.JWT_SECRET;
++  if (!valor || valor.length < 32) {
++    throw new Error("JWT_SECRET ausente ou com menos de 32 caracteres");
++  }
++  return new TextEncoder().encode(valor);
++}
++
++export async function criarToken(usuarioId: number) {
++  const expiraEm = Math.floor(Date.now() / 1000) + EXPIRACAO_SEGUNDOS;
++  const token = await new SignJWT({})
++    .setProtectedHeader({ alg: "HS256" })
++    .setSubject(String(usuarioId))
++    .setIssuer(EMISSOR)
++    .setIssuedAt()
++    .setExpirationTime(expiraEm)
++    .sign(segredo());
++
++  return { token, expiraEm: new Date(expiraEm * 1000).toISOString() };
++}
++
++/** Devolve o id do usuário se o token for válido e não tiver expirado; senão, null. */
++export async function verificarToken(token: string): Promise<number | null> {
++  const chave = segredo();
++
++  try {
++    const { payload } = await jwtVerify(token, chave, {
++      algorithms: ["HS256"],
++      issuer: EMISSOR,
++    });
++    const id = Number(payload.sub);
++    return Number.isInteger(id) && id > 0 ? id : null;
++  } catch {
++    return null;
++  }
++}
+diff --git a/lib/server/db/usuarios.ts b/lib/server/db/usuarios.ts
+new file mode 100644
+index 0000000..64401dd
+--- /dev/null
++++ b/lib/server/db/usuarios.ts
+@@ -0,0 +1,96 @@
++import pool from "@/lib/db";
++import type { Papel, UsuarioPublico } from "@/lib/server/auth/tipos";
++
++export interface UsuarioComHash extends UsuarioPublico {
++  senha_hash: string;
++}
++
++const COLUNAS_PUBLICAS = "id, email, papel, mesario_id, criado_em";
++
++export async function buscarPorEmail(
++  email: string,
++): Promise<UsuarioComHash | null> {
++  const resultado = await pool.query<UsuarioComHash>(
++    `SELECT ${COLUNAS_PUBLICAS}, senha_hash FROM usuarios WHERE email = $1`,
++    [email],
++  );
++  return resultado.rows[0] ?? null;
++}
++
++export async function buscarPublicoPorId(
++  id: number,
++): Promise<UsuarioPublico | null> {
++  const resultado = await pool.query<UsuarioPublico>(
++    `SELECT ${COLUNAS_PUBLICAS} FROM usuarios WHERE id = $1`,
++    [id],
++  );
++  return resultado.rows[0] ?? null;
++}
++
++export async function listarPublicos(): Promise<UsuarioPublico[]> {
++  const resultado = await pool.query<UsuarioPublico>(
++    `SELECT ${COLUNAS_PUBLICAS} FROM usuarios ORDER BY id`,
++  );
++  return resultado.rows;
++}
++
++export async function buscarMesarioId(
++  cpf: string,
++  tituloEleitor: string,
++): Promise<number | null> {
++  const resultado = await pool.query<{ id: number }>(
++    "SELECT id FROM mesarios WHERE cpf = $1 AND titulo_eleitor = $2",
++    [cpf, tituloEleitor],
++  );
++  return resultado.rows[0]?.id ?? null;
++}
++
++export async function inserirUsuario(dados: {
++  email: string;
++  senhaHash: string;
++  papel: Papel;
++  mesarioId: number | null;
++}): Promise<UsuarioPublico> {
++  const resultado = await pool.query<UsuarioPublico>(
++    `INSERT INTO usuarios (email, senha_hash, papel, mesario_id)
++     VALUES ($1, $2, $3, $4)
++     RETURNING ${COLUNAS_PUBLICAS}`,
++    [dados.email, dados.senhaHash, dados.papel, dados.mesarioId],
++  );
++  return resultado.rows[0];
++}
++
++export async function contarFalhasRecentes(
++  email: string,
++  ip: string | null,
++  janelaMinutos: number,
++): Promise<{ porEmail: number; porIp: number }> {
++  const resultado = await pool.query<{ por_email: string; por_ip: string }>(
++    `SELECT
++       count(*) FILTER (WHERE email = $1) AS por_email,
++       count(*) FILTER (WHERE $2::varchar IS NOT NULL AND ip = $2) AS por_ip
++     FROM tentativas_login
++     WHERE criada_em > now() - make_interval(mins => $3)`,
++    [email, ip, janelaMinutos],
++  );
++  const linha = resultado.rows[0];
++  return { porEmail: Number(linha.por_email), porIp: Number(linha.por_ip) };
++}
++
++export async function registrarFalha(
++  email: string,
++  ip: string | null,
++): Promise<void> {
++  await pool.query(
++    "INSERT INTO tentativas_login (email, ip) VALUES ($1, $2)",
++    [email, ip],
++  );
++  // Limpeza oportunista: falhas com mais de um dia não servem mais.
++  await pool.query(
++    "DELETE FROM tentativas_login WHERE criada_em < now() - interval '1 day'",
++  );
++}
++
++export async function limparFalhas(email: string): Promise<void> {
++  await pool.query("DELETE FROM tentativas_login WHERE email = $1", [email]);
++}
+diff --git a/lib/server/http.ts b/lib/server/http.ts
+new file mode 100644
+index 0000000..e80cabc
+--- /dev/null
++++ b/lib/server/http.ts
+@@ -0,0 +1,43 @@
++import { NextResponse } from "next/server";
++
++export type CamposInvalidos = Record<string, string>;
++
++/** Resposta de erro no formato { erro, campos? } usado pelas rotas novas. */
++export function respostaErro(
++  status: number,
++  erro: string,
++  opcoes: { campos?: CamposInvalidos; headers?: HeadersInit } = {},
++) {
++  return NextResponse.json(
++    opcoes.campos ? { erro, campos: opcoes.campos } : { erro },
++    { status, headers: opcoes.headers },
++  );
++}
++
++/** Lê o corpo JSON. Devolve undefined se o corpo não for JSON válido. */
++export async function lerJson(request: Request): Promise<unknown> {
++  try {
++    return await request.json();
++  } catch {
++    return undefined;
++  }
++}
++
++/** IP do cliente. Na Vercel, o primeiro item de x-forwarded-for é o do cliente. */
++export function ipDaRequisicao(request: Request): string | null {
++  const encaminhado = request.headers.get("x-forwarded-for");
++  const ip = encaminhado?.split(",")[0]?.trim() || request.headers.get("x-real-ip");
++  return ip ? ip.slice(0, 45) : null;
++}
++
++/** Registra só o tipo e a mensagem do erro, nunca o corpo da requisição. */
++export function registrarErro(contexto: string, erro: unknown) {
++  if (erro instanceof Error) {
++    const codigo = (erro as { code?: unknown }).code;
++    console.error(
++      `[${contexto}] ${erro.name}${typeof codigo === "string" ? ` (${codigo})` : ""}: ${erro.message}`,
++    );
++    return;
++  }
++  console.error(`[${contexto}] erro desconhecido`);
++}
+diff --git a/lib/server/services/auth.ts b/lib/server/services/auth.ts
+new file mode 100644
+index 0000000..bb29cbf
+--- /dev/null
++++ b/lib/server/services/auth.ts
+@@ -0,0 +1,143 @@
++import type { Papel, UsuarioPublico } from "@/lib/server/auth/tipos";
++import { conferirSenha, gerarHash } from "@/lib/server/auth/senha";
++import { criarToken } from "@/lib/server/auth/token";
++import {
++  buscarMesarioId,
++  buscarPorEmail,
++  contarFalhasRecentes,
++  inserirUsuario,
++  limparFalhas,
++  registrarFalha,
++} from "@/lib/server/db/usuarios";
++import type { CamposInvalidos } from "@/lib/server/http";
++import type { CriarUsuarioEntrada } from "@/lib/server/validation/usuarios";
++
++const JANELA_MINUTOS = 15;
++const MAX_FALHAS_POR_EMAIL = 5;
++const MAX_FALHAS_POR_IP = 20;
++
++export interface Falha {
++  ok: false;
++  status: number;
++  erro: string;
++  campos?: CamposInvalidos;
++  retryAfterSegundos?: number;
++}
++
++/**
++ * Cria uma conta. Sem token, só nasce conta de mesário, ligada a um cadastro
++ * existente por CPF e título. Outros papéis exigem um administrador.
++ */
++export async function criarConta(
++  entrada: CriarUsuarioEntrada,
++  chamador: UsuarioPublico | null,
++): Promise<{ ok: true; usuario: UsuarioPublico } | Falha> {
++  const papel: Papel = entrada.papel ?? "mesario";
++
++  if (papel !== "mesario") {
++    if (!chamador) {
++      return {
++        ok: false,
++        status: 401,
++        erro: "Autenticação necessária para criar este tipo de conta",
++      };
++    }
++    if (chamador.papel !== "administrador") {
++      return {
++        ok: false,
++        status: 403,
++        erro: "Sem permissão para criar este tipo de conta",
++      };
++    }
++  }
++
++  let mesarioId: number | null = null;
++  const { cpf, titulo_eleitor: titulo } = entrada;
++
++  if (papel === "mesario" && (cpf || titulo || !chamador)) {
++    const campos: CamposInvalidos = {};
++    if (!cpf) campos.cpf = "Informe o CPF";
++    if (!titulo) campos.titulo_eleitor = "Informe o título de eleitor";
++    if (Object.keys(campos).length > 0 || !cpf || !titulo) {
++      return { ok: false, status: 400, erro: "Dados inválidos", campos };
++    }
++
++    mesarioId = await buscarMesarioId(cpf, titulo);
++    if (mesarioId === null) {
++      return {
++        ok: false,
++        status: 400,
++        erro: "Dados inválidos",
++        campos: { cadastro: "Nenhum cadastro encontrado com esses dados" },
++      };
++    }
++  }
++
++  const senhaHash = await gerarHash(entrada.senha);
++
++  try {
++    const usuario = await inserirUsuario({
++      email: entrada.email,
++      senhaHash,
++      papel,
++      mesarioId,
++    });
++    return { ok: true, usuario };
++  } catch (erro) {
++    const { code, constraint } = erro as { code?: string; constraint?: string };
++    if (code === "23505") {
++      return {
++        ok: false,
++        status: 409,
++        erro:
++          constraint === "usuarios_mesario_id_key"
++            ? "Já existe uma conta para este cadastro"
++            : "E-mail já cadastrado",
++      };
++    }
++    throw erro;
++  }
++}
++
++/** Confere e-mail e senha. A mensagem de falha é a mesma para e-mail inexistente e senha errada. */
++export async function autenticar(
++  email: string,
++  senha: string,
++  ip: string | null,
++): Promise<
++  | {
++      ok: true;
++      token: string;
++      expiraEm: string;
++      usuario: UsuarioPublico;
++    }
++  | Falha
++> {
++  const falhas = await contarFalhasRecentes(email, ip, JANELA_MINUTOS);
++  if (
++    falhas.porEmail >= MAX_FALHAS_POR_EMAIL ||
++    falhas.porIp >= MAX_FALHAS_POR_IP
++  ) {
++    return {
++      ok: false,
++      status: 429,
++      erro: "Muitas tentativas. Tente novamente mais tarde",
++      retryAfterSegundos: JANELA_MINUTOS * 60,
++    };
++  }
++
++  const registro = await buscarPorEmail(email);
++  const confere = await conferirSenha(senha, registro?.senha_hash);
++
++  if (!registro || !confere) {
++    await registrarFalha(email, ip);
++    return { ok: false, status: 401, erro: "E-mail ou senha inválidos" };
++  }
++
++  await limparFalhas(email);
++  const { token, expiraEm } = await criarToken(registro.id);
++  const { senha_hash: _descartado, ...usuario } = registro;
++  void _descartado;
++
++  return { ok: true, token, expiraEm, usuario };
++}
+diff --git a/lib/server/validation/usuarios.ts b/lib/server/validation/usuarios.ts
+new file mode 100644
+index 0000000..5ab6b30
+--- /dev/null
++++ b/lib/server/validation/usuarios.ts
+@@ -0,0 +1,62 @@
++import { z } from "zod";
++
++import { PAPEIS } from "@/lib/server/auth/tipos";
++import type { CamposInvalidos } from "@/lib/server/http";
++
++const email = z
++  .string("Informe o e-mail")
++  .trim()
++  .toLowerCase()
++  .max(254, "O e-mail deve ter no máximo 254 caracteres")
++  .pipe(z.email("Informe um e-mail válido"));
++
++const senhaForte = z
++  .string("Informe a senha")
++  .min(10, "A senha deve ter ao menos 10 caracteres")
++  .refine(
++    (valor) => Buffer.byteLength(valor, "utf8") <= 72,
++    "A senha deve ter no máximo 72 bytes",
++  )
++  .regex(/[a-z]/, "A senha deve ter ao menos uma letra minúscula")
++  .regex(/[A-Z]/, "A senha deve ter ao menos uma letra maiúscula")
++  .regex(/[0-9]/, "A senha deve ter ao menos um número");
++
++function somenteDigitos(tamanho: number, mensagem: string) {
++  return z
++    .string(mensagem)
++    .transform((valor) => valor.replace(/\D/g, ""))
++    .pipe(z.string().length(tamanho, mensagem));
++}
++
++export const criarUsuarioSchema = z.object({
++  email,
++  senha: senhaForte,
++  papel: z.enum(PAPEIS, "Papel inválido").optional(),
++  cpf: somenteDigitos(11, "O CPF deve ter 11 dígitos").optional(),
++  titulo_eleitor: somenteDigitos(
++    12,
++    "O título de eleitor deve ter 12 dígitos",
++  ).optional(),
++});
++
++export const loginSchema = z.object({
++  email,
++  senha: z
++    .string("Informe a senha")
++    .min(1, "Informe a senha")
++    .max(200, "Senha inválida"),
++});
++
++export type CriarUsuarioEntrada = z.infer<typeof criarUsuarioSchema>;
++
++/** Converte os erros do zod em { campo: mensagem }, uma mensagem por campo. */
++export function camposDoErro(erro: z.ZodError): CamposInvalidos {
++  const campos: CamposInvalidos = {};
++  for (const problema of erro.issues) {
++    const chave = problema.path.join(".") || "corpo";
++    if (!(chave in campos)) {
++      campos[chave] = problema.message;
++    }
++  }
++  return campos;
++}
+diff --git a/package-lock.json b/package-lock.json
+index c668fe7..32afb9b 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -14,13 +14,16 @@
+         "@govbr-ds/webcomponents-react": "^2.2.0",
+         "@supabase/ssr": "^0.12.7",
+         "@supabase/supabase-js": "^2.118.0",
++        "bcryptjs": "^3.0.3",
+         "ev": "^0.0.7",
++        "jose": "^6.2.15",
+         "next": "16.3.4",
+         "npm": "^12.0.2",
+         "pg": "^8.23.1",
+         "react": "19.2.8",
+         "react-dom": "19.2.8",
+-        "rund": "^0.0.3"
++        "rund": "^0.0.3",
++        "zod": "^4.6.7"
+       },
+       "devDependencies": {
+         "@tailwindcss/postcss": "^4",
+@@ -3038,6 +3041,15 @@
+         "node": ">=6.0.0"
+       }
+     },
++    "node_modules/bcryptjs": {
++      "version": "3.0.3",
++      "resolved": "https://registry.npmjs.org/bcryptjs/-/bcryptjs-3.0.3.tgz",
++      "integrity": "sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==",
++      "license": "BSD-3-Clause",
++      "bin": {
++        "bcrypt": "bin/bcrypt"
++      }
++    },
+     "node_modules/brace-expansion": {
+       "version": "1.1.18",
+       "resolved": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.18.tgz",
+@@ -5279,6 +5291,15 @@
+         "jiti": "lib/jiti-cli.mjs"
+       }
+     },
++    "node_modules/jose": {
++      "version": "6.2.15",
++      "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.15.tgz",
++      "integrity": "sha512-qdF6ewcZARtef63fJ9AKKZPgxw+t7USH6HLXYcD4CrdmSvDp79rpJSPFEKc90QBeGS63u1KQtN2MZQHC0yDIzA==",
++      "license": "MIT",
++      "funding": {
++        "url": "https://github.com/sponsors/panva"
++      }
++    },
+     "node_modules/js-tokens": {
+       "version": "4.0.0",
+       "resolved": "https://registry.npmjs.org/js-tokens/-/js-tokens-4.0.0.tgz",
+@@ -9444,10 +9465,9 @@
+       }
+     },
+     "node_modules/zod": {
+-      "version": "4.5.4",
+-      "resolved": "https://registry.npmjs.org/zod/-/zod-4.5.4.tgz",
+-      "integrity": "sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==",
+-      "dev": true,
++      "version": "4.6.7",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
++      "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+       "license": "MIT",
+       "funding": {
+         "url": "https://github.com/sponsors/colinhacks"
+diff --git a/package.json b/package.json
+index d1c116b..e755926 100644
+--- a/package.json
++++ b/package.json
+@@ -15,13 +15,16 @@
+     "@govbr-ds/webcomponents-react": "^2.2.0",
+     "@supabase/ssr": "^0.12.7",
+     "@supabase/supabase-js": "^2.118.0",
++    "bcryptjs": "^3.0.3",
+     "ev": "^0.0.7",
++    "jose": "^6.2.15",
+     "next": "16.3.4",
+     "npm": "^12.0.2",
+     "pg": "^8.23.1",
+     "react": "19.2.8",
+     "react-dom": "19.2.8",
+-    "rund": "^0.0.3"
++    "rund": "^0.0.3",
++    "zod": "^4.6.7"
+   },
+   "devDependencies": {
+     "@tailwindcss/postcss": "^4",
+diff --git a/scripts/criar-admin.mjs b/scripts/criar-admin.mjs
+new file mode 100644
+index 0000000..d2f9b51
+--- /dev/null
++++ b/scripts/criar-admin.mjs
+@@ -0,0 +1,59 @@
++// Cria o primeiro administrador. Rode uma vez, com autorização:
++//   node --env-file=.env.local scripts/criar-admin.mjs
++// Variáveis lidas do ambiente: DATABASE_URL, ADMIN_EMAIL e ADMIN_SENHA.
++// A senha nunca é impressa nem aceita por argumento de linha de comando.
++import bcrypt from "bcryptjs";
++import pg from "pg";
++
++const { DATABASE_URL, ADMIN_EMAIL, ADMIN_SENHA } = process.env;
++
++function falhar(mensagem) {
++  console.error(mensagem);
++  process.exit(1);
++}
++
++if (!DATABASE_URL || !ADMIN_EMAIL || !ADMIN_SENHA) {
++  falhar("Defina DATABASE_URL, ADMIN_EMAIL e ADMIN_SENHA no ambiente.");
++}
++
++const email = ADMIN_EMAIL.trim().toLowerCase();
++if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
++  falhar("ADMIN_EMAIL não é um e-mail válido.");
++}
++
++if (
++  ADMIN_SENHA.length < 10 ||
++  Buffer.byteLength(ADMIN_SENHA, "utf8") > 72 ||
++  !/[a-z]/.test(ADMIN_SENHA) ||
++  !/[A-Z]/.test(ADMIN_SENHA) ||
++  !/[0-9]/.test(ADMIN_SENHA)
++) {
++  falhar(
++    "ADMIN_SENHA deve ter de 10 a 72 bytes, com minúscula, maiúscula e número.",
++  );
++}
++
++const pool = new pg.Pool({
++  connectionString: DATABASE_URL,
++  ssl: { rejectUnauthorized: false },
++});
++
++try {
++  const existente = await pool.query(
++    "SELECT id FROM usuarios WHERE email = $1",
++    [email],
++  );
++  if (existente.rows.length > 0) {
++    falhar("Já existe uma conta com esse e-mail. Nada foi alterado.");
++  }
++
++  const hash = await bcrypt.hash(ADMIN_SENHA, 12);
++  const criado = await pool.query(
++    `INSERT INTO usuarios (email, senha_hash, papel)
++     VALUES ($1, $2, 'administrador') RETURNING id`,
++    [email, hash],
++  );
++  console.log(`Administrador criado (id ${criado.rows[0].id}).`);
++} finally {
++  await pool.end();
++}

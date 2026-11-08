@@ -1,0 +1,2110 @@
+diff --git a/app/(cartorio)/cartorio/convocacoes/page.tsx b/app/(cartorio)/cartorio/convocacoes/page.tsx
+index a66ba7f..faffd61 100644
+--- a/app/(cartorio)/cartorio/convocacoes/page.tsx
++++ b/app/(cartorio)/cartorio/convocacoes/page.tsx
+@@ -2,7 +2,7 @@
+ 
+ import { useState } from "react";
+ 
+-import { BrButton } from "@govbr-ds/webcomponents-react";
++import { BrButton, BrMessage } from "@govbr-ds/webcomponents-react";
+ 
+ import ConvocationsSummary from "@/components/cartorio/ConvocationsSummary";
+ import ConvocationsTable from "@/components/cartorio/ConvocationsTable";
+@@ -29,6 +29,12 @@ export default function ConvocacoesPage() {
+   if (mode === "prepare") {
+     return (
+       <>
++        <BrMessage
++          state="warning"
++          showIcon
++          message="O envio de mensagens está desativado nesta versão. As telas servem apenas para registrar e acompanhar o status das convocações; nenhuma mensagem é enviada aos mesários."
++        />
++
+         <PrepareConvocations
+           onBack={() => setMode("list")}
+           onConfirm={(ids) => {
+@@ -78,6 +84,12 @@ export default function ConvocacoesPage() {
+         </BrButton>
+       </div>
+ 
++      <BrMessage
++        state="warning"
++        showIcon
++        message="O envio de mensagens está desativado nesta versão. As telas servem apenas para registrar e acompanhar o status das convocações; nenhuma mensagem é enviada aos mesários."
++      />
++
+       <ConvocationsSummary />
+ 
+       <ConvocationsTable
+diff --git a/app/(cartorio)/cartorio/layout.tsx b/app/(cartorio)/cartorio/layout.tsx
+index 8edc586..c1e89b0 100644
+--- a/app/(cartorio)/cartorio/layout.tsx
++++ b/app/(cartorio)/cartorio/layout.tsx
+@@ -1,5 +1,6 @@
+ import type { ReactNode } from 'react';
+ 
++import GuardaAcesso from '@/components/auth/GuardaAcesso';
+ import AppHeader from '@/components/cartorio/AppHeader';
+ import Sidebar from '@/components/cartorio/Sidebar';
+ import { SidebarProvider } from '@/components/cartorio/SidebarContext';
+@@ -8,14 +9,16 @@ import styles from './layout.module.css';
+ 
+ export default function CartorioLayout({ children }: { children: ReactNode }) {
+   return (
+-    <SidebarProvider>          {/* <- precisa envolver TUDO que usa useSidebar */}
+-      <div className={styles.shell}>
+-        <AppHeader />           {/* usa useSidebar() */}
+-        <div className={styles.body}>
+-          <Sidebar />           {/* usa useSidebar() */}
+-          <main className={styles.content}>{children}</main>
++    <GuardaAcesso papeis={['cartorio', 'administrador']}>
++      <SidebarProvider>          {/* <- precisa envolver TUDO que usa useSidebar */}
++        <div className={styles.shell}>
++          <AppHeader />           {/* usa useSidebar() */}
++          <div className={styles.body}>
++            <Sidebar />           {/* usa useSidebar() */}
++            <main className={styles.content}>{children}</main>
++          </div>
+         </div>
+-      </div>
+-    </SidebarProvider>
++      </SidebarProvider>
++    </GuardaAcesso>
+   );
+ }
+\ No newline at end of file
+diff --git a/app/(cidadao)/cadastro/dados/page.tsx b/app/(cidadao)/cadastro/dados/page.tsx
+index 46b240f..2345a8b 100644
+--- a/app/(cidadao)/cadastro/dados/page.tsx
++++ b/app/(cidadao)/cadastro/dados/page.tsx
+@@ -16,11 +16,10 @@ export default function CadastroDadosPage() {
+         </h1>
+ 
+         <p className={flow.text}>
+-          Para se voluntariar, informe seu CPF ou nº do título e o código de
+-          autenticação gerado pelo aplicativo e-Título.
++          Para se voluntariar, informe seu CPF ou nº do título de eleitor.
+         </p>
+ 
+-        <IdentificacaoForm id={FORM_ID} modo="cadastro" />
++        <IdentificacaoForm id={FORM_ID} />
+       </section>
+ 
+       <WizardNav formId={FORM_ID} />
+diff --git a/app/(cidadao)/criar-conta/page.tsx b/app/(cidadao)/criar-conta/page.tsx
+new file mode 100644
+index 0000000..1e0e1a7
+--- /dev/null
++++ b/app/(cidadao)/criar-conta/page.tsx
+@@ -0,0 +1,19 @@
++import CriarContaForm from "@/components/cidadao/CriarContaForm";
++import flow from "@/components/cidadao/Flow.module.css";
++
++export default function CriarContaPage() {
++  return (
++    <section className={flow.content} aria-labelledby="titulo-pagina">
++      <h1 className={flow.title} id="titulo-pagina">
++        Criar conta
++      </h1>
++
++      <p className={flow.text}>
++        Crie seu acesso para consultar e atualizar sua manifestação de
++        interesse. É preciso já ter feito o cadastro como voluntário.
++      </p>
++
++      <CriarContaForm />
++    </section>
++  );
++}
+diff --git a/app/(cidadao)/login/page.tsx b/app/(cidadao)/login/page.tsx
+index 0b58446..2924e4d 100644
+--- a/app/(cidadao)/login/page.tsx
++++ b/app/(cidadao)/login/page.tsx
+@@ -1,5 +1,5 @@
+ import flow from "@/components/cidadao/Flow.module.css";
+-import IdentificacaoForm from "@/components/cidadao/IdentificacaoForm";
++import LoginForm from "@/components/cidadao/LoginForm";
+ 
+ export default function LoginPage() {
+   return (
+@@ -9,12 +9,11 @@ export default function LoginPage() {
+       </h1>
+ 
+       <p className={flow.text}>
+-        Para consultar ou atualizar sua manifestação de interesse, informe seu
+-        CPF ou nº do título e o código de autenticação gerado pelo aplicativo
+-        e-Título.
++        Entre com seu e-mail e senha para consultar ou atualizar sua
++        manifestação de interesse.
+       </p>
+ 
+-      <IdentificacaoForm id="form-login" modo="login" botao="Entrar" />
++      <LoginForm />
+     </section>
+   );
+ }
+diff --git a/app/api/cadastro/page.tsx b/app/api/cadastro/page.tsx
+index 0b0478f..cb9f165 100644
+--- a/app/api/cadastro/page.tsx
++++ b/app/api/cadastro/page.tsx
+@@ -2,11 +2,14 @@
+ 
+ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+ 
++import GuardaAcesso from '@/components/auth/GuardaAcesso';
++import { apiFetch } from '@/lib/api/client';
+ import { TextField } from '@/components/cidadao/Field';
+ import flow from '@/components/cidadao/Flow.module.css';
+ import styles from './CadastroMesario.module.css';
+ 
+ interface Mesario {
++  id: number;
+   cpf: string;
+   titulo_eleitor: string;
+   nome_civil: string;
+@@ -22,7 +25,7 @@ interface Mesario {
+   status_interesse: boolean | null;
+ }
+ 
+-type DadosMesario = Omit<Mesario, 'status_interesse' | 'zona_eleitoral' | 'secao_eleitoral'> & {
++type DadosMesario = Omit<Mesario, 'id' | 'status_interesse' | 'zona_eleitoral' | 'secao_eleitoral'> & {
+   zona_eleitoral: string;
+   secao_eleitoral: string;
+ };
+@@ -46,10 +49,10 @@ async function lerResposta(response: Response) {
+   return response.json().catch(() => ({}));
+ }
+ 
+-export default function CadastroMesario() {
++function CadastroMesario() {
+   const [formData, setFormData] = useState<DadosMesario>(cadastroVazio);
+   const [mesarios, setMesarios] = useState<Mesario[]>([]);
+-  const [cpfEmEdicao, setCpfEmEdicao] = useState<string | null>(null);
++  const [emEdicao, setEmEdicao] = useState<Mesario | null>(null);
+   const [statusInteresse, setStatusInteresse] = useState(true);
+   const [mensagem, setMensagem] = useState('');
+   const [carregando, setCarregando] = useState(true);
+@@ -57,9 +60,9 @@ export default function CadastroMesario() {
+   async function carregarMesarios() {
+     setCarregando(true);
+     try {
+-      const response = await fetch('/api/mesarios');
++      const response = await apiFetch('/api/mesarios');
+       const result = await lerResposta(response);
+-      if (!response.ok) throw new Error(result.error || 'Não foi possível carregar os cadastros.');
++      if (!response.ok) throw new Error(result.erro || result.error || 'Não foi possível carregar os cadastros.');
+       setMesarios(result.data);
+     } catch (error) {
+       setMensagem(error instanceof Error ? error.message : 'Erro ao carregar os cadastros.');
+@@ -71,10 +74,10 @@ export default function CadastroMesario() {
+   useEffect(() => {
+     let ativo = true;
+ 
+-    fetch('/api/mesarios')
++    apiFetch('/api/mesarios')
+       .then(async (response) => {
+         const result = await lerResposta(response);
+-        if (!response.ok) throw new Error(result.error || 'Não foi possível carregar os cadastros.');
++        if (!response.ok) throw new Error(result.erro || result.error || 'Não foi possível carregar os cadastros.');
+         return result.data as Mesario[];
+       })
+       .then((data) => {
+@@ -105,14 +108,12 @@ export default function CadastroMesario() {
+     setMensagem('');
+ 
+     try {
+-      const editando = cpfEmEdicao !== null;
+-      const response = await fetch('/api/mesarios', {
++      const editando = emEdicao !== null;
++      const response = await apiFetch(editando ? `/api/mesarios/${emEdicao.id}` : '/api/mesarios', {
+         method: editando ? 'PUT' : 'POST',
+-        headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify(
+           editando
+             ? {
+-                cpf: cpfEmEdicao,
+                 telefone: formData.telefone,
+                 email: formData.email,
+                 status_interesse: statusInteresse,
+@@ -121,7 +122,7 @@ export default function CadastroMesario() {
+         ),
+       });
+       const result = await lerResposta(response);
+-      if (!response.ok) throw new Error(result.error || result.message || 'Não foi possível salvar o cadastro.');
++      if (!response.ok) throw new Error(result.erro || result.error || result.message || 'Não foi possível salvar o cadastro.');
+ 
+       setMensagem(editando ? 'Dados do mesário atualizados.' : 'Mesário cadastrado com sucesso.');
+       cancelarEdicao();
+@@ -134,7 +135,7 @@ export default function CadastroMesario() {
+   }
+ 
+   function iniciarEdicao(mesario: Mesario) {
+-    setCpfEmEdicao(mesario.cpf);
++    setEmEdicao(mesario);
+     setFormData({ ...cadastroVazio, telefone: mesario.telefone ?? '', email: mesario.email ?? '' });
+     setStatusInteresse(mesario.status_interesse ?? true);
+     setMensagem('');
+@@ -142,21 +143,21 @@ export default function CadastroMesario() {
+   }
+ 
+   function cancelarEdicao() {
+-    setCpfEmEdicao(null);
++    setEmEdicao(null);
+     setFormData(cadastroVazio);
+     setStatusInteresse(true);
+   }
+ 
+-  async function excluirMesario(cpf: string) {
+-    if (!window.confirm(`Excluir o cadastro de CPF ${cpf}? Esta ação não pode ser desfeita.`)) return;
++  async function excluirMesario(alvo: Mesario) {
++    if (!window.confirm(`Excluir o cadastro de CPF ${alvo.cpf}? Esta ação não pode ser desfeita.`)) return;
+ 
+     setCarregando(true);
+     setMensagem('');
+     try {
+-      const response = await fetch(`/api/mesarios?cpf=${encodeURIComponent(cpf)}`, { method: 'DELETE' });
++      const response = await apiFetch(`/api/mesarios/${alvo.id}`, { method: 'DELETE' });
+       const result = await lerResposta(response);
+-      if (!response.ok) throw new Error(result.error || result.message || 'Não foi possível excluir o cadastro.');
+-      if (cpfEmEdicao === cpf) cancelarEdicao();
++      if (!response.ok) throw new Error(result.erro || result.error || result.message || 'Não foi possível excluir o cadastro.');
++      if (emEdicao?.id === alvo.id) cancelarEdicao();
+       setMensagem('Cadastro excluído com sucesso.');
+       await carregarMesarios();
+     } catch (error) {
+@@ -175,12 +176,12 @@ export default function CadastroMesario() {
+ 
+       <section className={styles.section} aria-labelledby="titulo-formulario">
+         <h2 className={flow.sectionTitle} id="titulo-formulario">
+-          {cpfEmEdicao ? 'Atualizar dados do mesário' : 'Cadastrar mesário'}
++          {emEdicao ? 'Atualizar dados do mesário' : 'Cadastrar mesário'}
+         </h2>
+-        {cpfEmEdicao && <p className={flow.text}>CPF: {cpfEmEdicao}. Nesta edição, telefone, e-mail e status podem ser alterados.</p>}
++        {emEdicao && <p className={flow.text}>CPF: {emEdicao.cpf}. Nesta edição, telefone, e-mail e status podem ser alterados.</p>}
+ 
+         <form id="form-mesario" className={flow.form} onSubmit={handleSubmit}>
+-          {cpfEmEdicao ? (
++          {emEdicao ? (
+             <>
+               <TextField id="telefone" name="telefone" label="Telefone" type="tel" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.telefone ?? ''} onChange={handleChange} />
+               <TextField id="email" name="email" label="E-mail" type="email" autoComplete="email" placeholder="exemplo@email.com" value={formData.email ?? ''} onChange={handleChange} />
+@@ -213,9 +214,9 @@ export default function CadastroMesario() {
+ 
+           <div className={flow.actions}>
+             <button className={flow.primaryButton} type="submit" disabled={carregando}>
+-              {carregando ? 'Salvando...' : cpfEmEdicao ? 'Salvar alterações' : 'Cadastrar mesário'}
++              {carregando ? 'Salvando...' : emEdicao ? 'Salvar alterações' : 'Cadastrar mesário'}
+             </button>
+-            {cpfEmEdicao && <button className={flow.secondaryButton} type="button" onClick={cancelarEdicao}>Cancelar edição</button>}
++            {emEdicao && <button className={flow.secondaryButton} type="button" onClick={cancelarEdicao}>Cancelar edição</button>}
+           </div>
+         </form>
+       </section>
+@@ -234,7 +235,7 @@ export default function CadastroMesario() {
+         ) : (
+           <ul className={styles.list}>
+             {mesarios.map((mesario) => (
+-              <li className={styles.record} key={mesario.cpf}>
++              <li className={styles.record} key={mesario.id}>
+                 <div className={styles.recordDetails}>
+                   <strong>{mesario.nome_civil}</strong>
+                   <span>CPF: {mesario.cpf}</span>
+@@ -245,7 +246,7 @@ export default function CadastroMesario() {
+                   <button className={styles.iconButton} type="button" onClick={() => iniciarEdicao(mesario)} aria-label={`Editar ${mesario.nome_civil}`} title="Editar">
+                     <i className="fas fa-pen" aria-hidden="true" />
+                   </button>
+-                  <button className={`${styles.iconButton} ${styles.deleteButton}`} type="button" onClick={() => void excluirMesario(mesario.cpf)} disabled={carregando} aria-label={`Excluir ${mesario.nome_civil}`} title="Excluir">
++                  <button className={`${styles.iconButton} ${styles.deleteButton}`} type="button" onClick={() => void excluirMesario(mesario)} disabled={carregando} aria-label={`Excluir ${mesario.nome_civil}`} title="Excluir">
+                     <i className="fas fa-trash" aria-hidden="true" />
+                   </button>
+                 </div>
+@@ -256,4 +257,12 @@ export default function CadastroMesario() {
+       </section>
+     </section>
+   );
+-}
+\ No newline at end of file
++}
++
++export default function CadastroMesarioProtegido() {
++  return (
++    <GuardaAcesso papeis={['cartorio', 'administrador']}>
++      <CadastroMesario />
++    </GuardaAcesso>
++  );
++}
+diff --git a/app/api/mesarios/[id]/route.ts b/app/api/mesarios/[id]/route.ts
+new file mode 100644
+index 0000000..e33a675
+--- /dev/null
++++ b/app/api/mesarios/[id]/route.ts
+@@ -0,0 +1,116 @@
++import { NextResponse } from "next/server";
++
++import { autorizar } from "@/lib/server/auth/guard";
++import { ehDono, ehEquipe } from "@/lib/server/auth/posse";
++import {
++  atualizarMesario,
++  buscarMesarioPorId,
++  excluirMesario,
++} from "@/lib/server/db/mesarios";
++import { lerJson, registrarErro, respostaErro } from "@/lib/server/http";
++import {
++  atualizarMesarioSchema,
++  idSchema,
++} from "@/lib/server/validation/mesarios";
++import { camposDoErro } from "@/lib/server/validation/usuarios";
++
++type Contexto = { params: Promise<{ id: string }> };
++
++const SEM_PERMISSAO = "Sem permissão para acessar este cadastro";
++
++async function lerId(contexto: Contexto) {
++  return idSchema.safeParse((await contexto.params).id);
++}
++
++// Consulta um cadastro. O dono (mesário) ou o cartório.
++export async function GET(request: Request, contexto: Contexto) {
++  try {
++    const id = await lerId(contexto);
++    if (!id.success) {
++      return respostaErro(400, "Identificador inválido");
++    }
++
++    const acesso = await autorizar(request);
++    if (!acesso.ok) {
++      return acesso.resposta;
++    }
++    if (!ehEquipe(acesso.usuario) && !ehDono(acesso.usuario, id.data)) {
++      return respostaErro(403, SEM_PERMISSAO);
++    }
++
++    const mesario = await buscarMesarioPorId(id.data);
++    return mesario
++      ? NextResponse.json({ data: mesario })
++      : respostaErro(404, "Mesário não encontrado");
++  } catch (erro) {
++    registrarErro("consultar-mesario", erro);
++    return respostaErro(500, "Erro interno");
++  }
++}
++
++// Atualiza contato e interesse. O dono (mesário) ou o cartório.
++// O mesário só pode retirar o interesse; reativar fica com o cartório.
++export async function PUT(request: Request, contexto: Contexto) {
++  try {
++    const id = await lerId(contexto);
++    if (!id.success) {
++      return respostaErro(400, "Identificador inválido");
++    }
++
++    const acesso = await autorizar(request);
++    if (!acesso.ok) {
++      return acesso.resposta;
++    }
++    if (!ehEquipe(acesso.usuario) && !ehDono(acesso.usuario, id.data)) {
++      return respostaErro(403, SEM_PERMISSAO);
++    }
++
++    const entrada = atualizarMesarioSchema.safeParse(await lerJson(request));
++    if (!entrada.success) {
++      return respostaErro(400, "Dados inválidos", {
++        campos: camposDoErro(entrada.error),
++      });
++    }
++
++    if (!ehEquipe(acesso.usuario) && entrada.data.status_interesse === true) {
++      return respostaErro(403, "Para reativar o interesse, procure o cartório");
++    }
++
++    const mesario = await atualizarMesario(id.data, entrada.data);
++    return mesario
++      ? NextResponse.json({ data: mesario })
++      : respostaErro(404, "Mesário não encontrado");
++  } catch (erro) {
++    registrarErro("atualizar-mesario", erro);
++    return respostaErro(500, "Erro interno");
++  }
++}
++
++// Exclui o cadastro. Só administrador.
++export async function DELETE(request: Request, contexto: Contexto) {
++  try {
++    const id = await lerId(contexto);
++    if (!id.success) {
++      return respostaErro(400, "Identificador inválido");
++    }
++
++    const acesso = await autorizar(request, { papeis: ["administrador"] });
++    if (!acesso.ok) {
++      return acesso.resposta;
++    }
++
++    return (await excluirMesario(id.data))
++      ? new NextResponse(null, { status: 204 })
++      : respostaErro(404, "Mesário não encontrado");
++  } catch (erro) {
++    const { code } = erro as { code?: string };
++    if (code === "23503") {
++      return respostaErro(
++        409,
++        "Existe uma conta de acesso ligada a este cadastro",
++      );
++    }
++    registrarErro("excluir-mesario", erro);
++    return respostaErro(500, "Erro interno");
++  }
++}
+diff --git a/app/api/mesarios/consultar/route.ts b/app/api/mesarios/consultar/route.ts
+deleted file mode 100644
+index 72f48c3..0000000
+--- a/app/api/mesarios/consultar/route.ts
++++ /dev/null
+@@ -1,72 +0,0 @@
+-import { NextResponse } from "next/server";
+-
+-import pool from "@/lib/db";
+-
+-function ehObjeto(
+-  valor: unknown,
+-): valor is Record<string, unknown> {
+-  return typeof valor === "object" && valor !== null && !Array.isArray(valor);
+-}
+-
+-export async function POST(request: Request) {
+-  let body: unknown;
+-
+-  try {
+-    body = await request.json();
+-  } catch {
+-    return NextResponse.json(
+-      { message: "Informe os dados de identificação." },
+-      { status: 400 },
+-    );
+-  }
+-
+-  if (!ehObjeto(body)) {
+-    return NextResponse.json(
+-      { message: "Informe os dados de identificação." },
+-      { status: 400 },
+-    );
+-  }
+-
+-  const identificador =
+-    typeof body.identificador === "string"
+-      ? body.identificador.replace(/\D/g, "")
+-      : "";
+-  const codigo =
+-    typeof body.codigo === "string" ? body.codigo.replace(/\D/g, "") : "";
+-
+-  if (![11, 12].includes(identificador.length) || !codigo) {
+-    return NextResponse.json(
+-      { message: "CPF/título ou código de autenticação inválido." },
+-      { status: 400 },
+-    );
+-  }
+-
+-  try {
+-    const result = await pool.query(
+-      `SELECT mesarios.*
+-       FROM mesarios
+-       WHERE mesarios.codigo_titulo = $1
+-         AND (mesarios.cpf = $2 OR mesarios.titulo_eleitor = $2)
+-       LIMIT 1`,
+-      [codigo, identificador],
+-    );
+-
+-    if (result.rows.length === 0) {
+-      return NextResponse.json(
+-        { message: "CPF/título ou código de autenticação não conferem." },
+-        { status: 401 },
+-      );
+-    }
+-
+-    return NextResponse.json(
+-      { success: true, data: result.rows[0] },
+-      { status: 200 },
+-    );
+-  } catch (error: unknown) {
+-    console.error("Erro ao consultar cadastro de mesário:", error);
+-    return NextResponse.json(
+-      { message: "Não foi possível consultar o cadastro neste momento." },
+-      { status: 500 },
+-    );
+-  }
+-}
+diff --git a/app/api/mesarios/route.ts b/app/api/mesarios/route.ts
+index 86569cb..06563f1 100644
+--- a/app/api/mesarios/route.ts
++++ b/app/api/mesarios/route.ts
+@@ -1,132 +1,90 @@
+-import { NextResponse } from 'next/server';
+-import pool from '@/lib/db';
+-
+-function mensagemErro(error: unknown) {
+-  return error instanceof Error ? error.message : 'Erro interno';
++import { NextResponse } from "next/server";
++
++import { autorizar } from "@/lib/server/auth/guard";
++import {
++  buscarMesarioPorCpf,
++  inserirMesario,
++  listarMesarios,
++} from "@/lib/server/db/mesarios";
++import { lerJson, registrarErro, respostaErro } from "@/lib/server/http";
++import { camposDoErro } from "@/lib/server/validation/usuarios";
++import { criarMesarioSchema } from "@/lib/server/validation/mesarios";
++
++const LIMITE_PADRAO = 50;
++const LIMITE_MAXIMO = 200;
++
++function inteiroPositivo(valor: string | null, padrao: number) {
++  const numero = Number(valor);
++  return Number.isInteger(numero) && numero > 0 ? numero : padrao;
+ }
+ 
+-// READ: Buscar mesário por CPF ou listar todos
++// Lista os cadastros, ou um só com ?cpf=. Só cartório e administrador.
+ export async function GET(request: Request) {
+   try {
+-    const { searchParams } = new URL(request.url);
+-    const cpf = searchParams.get('cpf');
++    const acesso = await autorizar(request, {
++      papeis: ["cartorio", "administrador"],
++    });
++    if (!acesso.ok) {
++      return acesso.resposta;
++    }
+ 
+-    const client = await pool.connect();
++    const parametros = new URL(request.url).searchParams;
++    const cpfInformado = parametros.get("cpf");
+ 
+-    if (cpf) {
+-      const result = await client.query('SELECT * FROM mesarios WHERE cpf = $1', [cpf]);
+-      client.release();
+-      if (result.rows.length === 0) {
+-        return NextResponse.json({ success: false, message: 'Mesário não encontrado' }, { status: 404 });
++    if (cpfInformado !== null) {
++      const cpf = cpfInformado.replace(/\D/g, "");
++      if (cpf.length !== 11) {
++        return respostaErro(400, "Informe um CPF válido", {
++          campos: { cpf: "O CPF deve ter 11 dígitos" },
++        });
+       }
+-      return NextResponse.json({ success: true, data: result.rows[0] }, { status: 200 });
+-    }
+ 
+-    const result = await client.query('SELECT * FROM mesarios ORDER BY id DESC');
+-    client.release();
+-    return NextResponse.json({ success: true, data: result.rows }, { status: 200 });
++      const mesario = await buscarMesarioPorCpf(cpf);
++      return mesario
++        ? NextResponse.json({ data: mesario })
++        : respostaErro(404, "Mesário não encontrado");
++    }
+ 
+-  } catch (error: unknown) {
+-    return NextResponse.json({ success: false, error: mensagemErro(error) }, { status: 500 });
++    const limite = Math.min(
++      inteiroPositivo(parametros.get("limite"), LIMITE_PADRAO),
++      LIMITE_MAXIMO,
++    );
++    const pagina = inteiroPositivo(parametros.get("pagina"), 1);
++    const { itens, total } = await listarMesarios(
++      limite,
++      (pagina - 1) * limite,
++    );
++
++    return NextResponse.json({ data: itens, total, pagina, limite });
++  } catch (erro) {
++    registrarErro("listar-mesarios", erro);
++    return respostaErro(500, "Erro interno");
+   }
+ }
+ 
+-// CREATE: Cadastrar novo mesário 
++// Manifestação de interesse. Pública, como o cadastro do cidadão sempre foi.
+ export async function POST(request: Request) {
+-  try {
+-    const body = await request.json();
+-    const {
+-      cpf, titulo_eleitor, nome_civil, data_nascimento,
+-      nome_mae, nome_pai, municipio, zona_eleitoral,
+-      secao_eleitoral, local_votacao, telefone, email
+-    } = body;
+-
+-    const query = `
+-      INSERT INTO mesarios 
+-      (cpf, titulo_eleitor, nome_civil, data_nascimento, nome_mae, nome_pai, municipio, zona_eleitoral, secao_eleitoral, local_votacao, telefone, email)
+-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+-      RETURNING *;
+-    `;
+-
+-    const cpfNormalizado = typeof cpf === 'string' ? cpf.replace(/\D/g, '') : '';
+-    if (cpfNormalizado.length !== 11) {
+-      return NextResponse.json({ success: false, message: 'Informe um CPF válido' }, { status: 400 });
+-    }
+-
+-    const values = [
+-      cpfNormalizado, titulo_eleitor, nome_civil, data_nascimento,
+-      nome_mae, nome_pai, municipio, zona_eleitoral,
+-      secao_eleitoral, local_votacao, telefone, email
+-    ];
+-
+-    const client = await pool.connect();
+-    try {
+-      const result = await client.query(query, values);
+-      return NextResponse.json({ success: true, data: result.rows[0] }, { status: 201 });
+-    } finally {
+-      client.release();
+-    }
+-  } catch (error: unknown) {
+-    return NextResponse.json({ success: false, error: mensagemErro(error) }, { status: 500 });
++  const entrada = criarMesarioSchema.safeParse(await lerJson(request));
++  if (!entrada.success) {
++    return respostaErro(400, "Dados inválidos", {
++      campos: camposDoErro(entrada.error),
++    });
+   }
+-}
+ 
+-// UPDATE: Atualizar dados do mesário (Botão "Atualizar Dados")
+-export async function PUT(request: Request) {
+   try {
+-    const body = await request.json();
+-    const { cpf, telefone, email, status_interesse } = body;
+-    const cpfNormalizado = typeof cpf === 'string' ? cpf.replace(/\D/g, '') : '';
+-
+-    if (cpfNormalizado.length !== 11 || typeof status_interesse !== 'boolean') {
+-      return NextResponse.json({ success: false, message: 'CPF ou status de interesse inválido' }, { status: 400 });
++    const mesario = await inserirMesario(entrada.data);
++    return NextResponse.json({ data: mesario }, { status: 201 });
++  } catch (erro) {
++    const { code, constraint } = erro as { code?: string; constraint?: string };
++    if (code === "23505") {
++      return respostaErro(
++        409,
++        constraint === "mesarios_titulo_eleitor_key"
++          ? "Já existe um cadastro com este título de eleitor"
++          : "Já existe um cadastro com este CPF",
++      );
+     }
+-
+-    const query = `
+-      UPDATE mesarios 
+-      SET telefone = $1, email = $2, status_interesse = $3
+-      WHERE cpf = $4
+-      RETURNING *;
+-    `;
+-
+-    const client = await pool.connect();
+-    try {
+-      const result = await client.query(query, [telefone, email, status_interesse, cpfNormalizado]);
+-      if (result.rows.length === 0) {
+-        return NextResponse.json({ success: false, message: 'Mesário não encontrado para atualização' }, { status: 404 });
+-      }
+-
+-      return NextResponse.json({ success: true, data: result.rows[0] }, { status: 200 });
+-    } finally {
+-      client.release();
+-    }
+-  } catch (error: unknown) {
+-    return NextResponse.json({ success: false, error: mensagemErro(error) }, { status: 500 });
++    registrarErro("criar-mesario", erro);
++    return respostaErro(500, "Erro interno");
+   }
+ }
+-
+-// DELETE: Excluir cadastro pelo CPF
+-export async function DELETE(request: Request) {
+-  try {
+-    const { searchParams } = new URL(request.url);
+-    const cpf = searchParams.get('cpf');
+-
+-    if (!cpf) {
+-      return NextResponse.json({ success: false, message: 'Informe o CPF do mesário' }, { status: 400 });
+-    }
+-
+-    const client = await pool.connect();
+-    try {
+-      const result = await client.query('DELETE FROM mesarios WHERE cpf = $1 RETURNING cpf', [cpf]);
+-      if (result.rows.length === 0) {
+-        return NextResponse.json({ success: false, message: 'Mesário não encontrado para exclusão' }, { status: 404 });
+-      }
+-
+-      return NextResponse.json({ success: true, data: result.rows[0] }, { status: 200 });
+-    } finally {
+-      client.release();
+-    }
+-  } catch (error: unknown) {
+-    return NextResponse.json({ success: false, error: mensagemErro(error) }, { status: 500 });
+-  }
+-}
+\ No newline at end of file
+diff --git a/components/auth/GuardaAcesso.tsx b/components/auth/GuardaAcesso.tsx
+new file mode 100644
+index 0000000..804db4b
+--- /dev/null
++++ b/components/auth/GuardaAcesso.tsx
+@@ -0,0 +1,32 @@
++"use client";
++
++import { useEffect, type ReactNode } from "react";
++import { useRouter } from "next/navigation";
++
++import { useAutenticacao, type Papel } from "@/lib/api/auth";
++
++interface GuardaAcessoProps {
++  papeis: readonly Papel[];
++  children: ReactNode;
++}
++
++/**
++ * Esconde a tela de quem não tem acesso e redireciona para o login.
++ * É conveniência de navegação: quem protege os dados é a API (401/403).
++ */
++export default function GuardaAcesso({
++  papeis,
++  children,
++}: Readonly<GuardaAcessoProps>) {
++  const router = useRouter();
++  const auth = useAutenticacao();
++  const permitido = !!auth && papeis.includes(auth.usuario.papel);
++
++  useEffect(() => {
++    if (auth !== undefined && !permitido) {
++      router.replace("/login");
++    }
++  }, [auth, permitido, router]);
++
++  return permitido ? <>{children}</> : null;
++}
+diff --git a/components/cartorio/AppHeader.tsx b/components/cartorio/AppHeader.tsx
+index 4f282b0..e6bc17c 100644
+--- a/components/cartorio/AppHeader.tsx
++++ b/components/cartorio/AppHeader.tsx
+@@ -1,23 +1,32 @@
+ "use client";
+ 
++import { useRouter } from "next/navigation";
++
++import { encerrarAcesso, useAutenticacao } from "@/lib/api/auth";
+ import AccessibilityBar from "@/components/layout/AccessibilityBar";
+ 
+ import { useSidebar } from "./SidebarContext";
+ import styles from "./AppHeader.module.css";
+ 
+-interface AppHeaderProps {
+-  userName?: string;
+-  userRole?: string;
+-}
++const ROTULO_PAPEL = {
++  mesario: "Mesário",
++  cartorio: "Cartório",
++  administrador: "Administrador",
++} as const;
+ 
+ const ZONA_ATUAL = "Eleições Gerais 2026 · 14ª Zona Eleitoral";
+ 
+-export default function AppHeader({
+-  //POR ENQUANTO FIXO (Só PARA TESTES)
+-  userName = "Artur",
+-  userRole = "Estagiário",
+-}: AppHeaderProps) {
++export default function AppHeader() {
+   const { isOpen, toggle } = useSidebar();
++  const router = useRouter();
++  const auth = useAutenticacao();
++  const userName = auth?.usuario.email ?? "";
++  const userRole = auth ? ROTULO_PAPEL[auth.usuario.papel] : "";
++
++  function sair() {
++    encerrarAcesso();
++    router.replace("/login");
++  }
+ 
+   return (
+     <header className={styles.header}>
+@@ -58,9 +67,11 @@ export default function AppHeader({
+           <button
+             className={styles.moreButton}
+             type="button"
+-            aria-label="Mais opções"
++            aria-label="Sair"
++            title="Sair"
++            onClick={sair}
+           >
+-            <i className="fas fa-ellipsis-v" aria-hidden="true" />
++            <i className="fas fa-sign-out-alt" aria-hidden="true" />
+           </button>
+         </div>
+       </div>
+diff --git a/components/cidadao/AceiteForm.tsx b/components/cidadao/AceiteForm.tsx
+index f431a3a..1b98480 100644
+--- a/components/cidadao/AceiteForm.tsx
++++ b/components/cidadao/AceiteForm.tsx
+@@ -58,7 +58,7 @@ export default function AceiteForm() {
+       const result = await response.json().catch(() => ({}));
+ 
+       if (!response.ok) {
+-        throw new Error(result.error || result.message || "Não foi possível registrar seu interesse.");
++        throw new Error(result.erro || result.error || result.message || "Não foi possível registrar seu interesse.");
+       }
+ 
+       atualizarSessao((atual) => ({
+diff --git a/components/cidadao/ContatoForm.tsx b/components/cidadao/ContatoForm.tsx
+index e1487ca..008d574 100644
+--- a/components/cidadao/ContatoForm.tsx
++++ b/components/cidadao/ContatoForm.tsx
+@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
+ import Link from "next/link";
+ import { useRouter } from "next/navigation";
+ 
++import { apiFetch, lerErro } from "@/lib/api/client";
++import { useAutenticacao } from "@/lib/api/auth";
+ import {
+   emailValido,
+   formatarTelefone,
+@@ -59,8 +61,11 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
+   const [whatsapp, setWhatsapp] = useState(contatoInicial?.whatsapp ?? false);
+   const [email, setEmail] = useState(contatoInicial?.email ?? "");
+   const [erros, setErros] = useState<Erros>({});
++  const [erroGeral, setErroGeral] = useState("");
++  const [salvando, setSalvando] = useState(false);
++  const auth = useAutenticacao();
+ 
+-  function enviar(evento: FormEvent<HTMLFormElement>) {
++  async function enviar(evento: FormEvent<HTMLFormElement>) {
+     evento.preventDefault();
+ 
+     const novosErros: Erros = {};
+@@ -82,6 +87,34 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
+       return;
+     }
+ 
++    if (modo === "atualizar") {
++      const mesarioId = auth?.usuario.mesario_id;
++      if (mesarioId == null) {
++        setErroGeral("Entre novamente para atualizar seus dados.");
++        return;
++      }
++
++      setSalvando(true);
++      setErroGeral("");
++      const resposta = await apiFetch(`/api/mesarios/${mesarioId}`, {
++        method: "PUT",
++        body: JSON.stringify({ telefone, email: emailLimpo || null }),
++      }).catch(() => null);
++      setSalvando(false);
++
++      if (!resposta?.ok) {
++        if (resposta?.status === 401) return;
++        const falha = resposta ? await lerErro(resposta) : null;
++        setErroGeral(
++          falha?.campos.telefone ??
++            falha?.campos.email ??
++            falha?.mensagem ??
++            "Não foi possível salvar. Tente novamente.",
++        );
++        return;
++      }
++    }
++
+     atualizarSessao((atual) => ({
+       ...atual,
+       contato: { telefone, whatsapp, email: emailLimpo },
+@@ -153,10 +186,21 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
+           </p>
+         </InfoBox>
+ 
++        {erroGeral && (
++          <p className={flow.text} role="alert">
++            {erroGeral}
++          </p>
++        )}
++
+         {modo === "atualizar" && (
+           <div className={flow.actions}>
+-            <button className={flow.primaryButton} type="submit" form={FORM_ID}>
+-              Salvar
++            <button
++              className={flow.primaryButton}
++              type="submit"
++              form={FORM_ID}
++              disabled={salvando}
++            >
++              {salvando ? "Salvando..." : "Salvar"}
+             </button>
+             <Link className={flow.secondaryButton} href="/meus-dados">
+               Cancelar
+diff --git a/components/cidadao/CriarContaForm.tsx b/components/cidadao/CriarContaForm.tsx
+new file mode 100644
+index 0000000..e9c91f0
+--- /dev/null
++++ b/components/cidadao/CriarContaForm.tsx
+@@ -0,0 +1,145 @@
++"use client";
++
++import { useState, type FormEvent } from "react";
++import Link from "next/link";
++import { useRouter } from "next/navigation";
++
++import { criarConta, destinoDoPapel, entrar } from "@/lib/api/acesso";
++import {
++  formatarIdentificador,
++  formatarTitulo,
++  somenteDigitos,
++} from "@/lib/cidadao/formatadores";
++
++import { TextField } from "./Field";
++import flow from "./Flow.module.css";
++
++type Erros = Partial<
++  Record<"email" | "senha" | "cpf" | "titulo_eleitor" | "cadastro", string>
++>;
++
++export default function CriarContaForm() {
++  const router = useRouter();
++  const [email, setEmail] = useState("");
++  const [senha, setSenha] = useState("");
++  const [cpf, setCpf] = useState("");
++  const [titulo, setTitulo] = useState("");
++  const [erros, setErros] = useState<Erros>({});
++  const [erroGeral, setErroGeral] = useState("");
++  const [enviando, setEnviando] = useState(false);
++
++  async function enviar(evento: FormEvent<HTMLFormElement>) {
++    evento.preventDefault();
++    setErroGeral("");
++
++    const novos: Erros = {};
++    if (!email.trim()) novos.email = "Informe o e-mail.";
++    if (!senha) novos.senha = "Informe a senha.";
++    if (somenteDigitos(cpf).length !== 11) novos.cpf = "O CPF deve ter 11 dígitos.";
++    if (somenteDigitos(titulo).length !== 12)
++      novos.titulo_eleitor = "O título deve ter 12 dígitos.";
++    setErros(novos);
++    if (Object.keys(novos).length > 0) return;
++
++    setEnviando(true);
++    const criada = await criarConta({
++      email: email.trim(),
++      senha,
++      cpf: somenteDigitos(cpf),
++      titulo_eleitor: somenteDigitos(titulo),
++    });
++
++    if (!criada.ok) {
++      setEnviando(false);
++      const { campos, mensagem } = criada.erro;
++      setErros({
++        email: campos.email,
++        senha: campos.senha,
++        cpf: campos.cpf,
++        titulo_eleitor: campos.titulo_eleitor,
++        cadastro: campos.cadastro,
++      });
++      setErroGeral(
++        campos.cadastro ??
++          (Object.keys(campos).length > 0 ? "Revise os campos indicados." : mensagem),
++      );
++      return;
++    }
++
++    const login = await entrar(email.trim(), senha);
++    setEnviando(false);
++    if (!login.ok) {
++      router.push("/login");
++      return;
++    }
++    router.push(destinoDoPapel(login.dados));
++  }
++
++  return (
++    <form id="form-criar-conta" className={flow.form} onSubmit={enviar} noValidate>
++      <TextField
++        id="conta-cpf"
++        label="CPF"
++        obrigatorio
++        inputMode="numeric"
++        autoComplete="off"
++        placeholder="000.000.000-00"
++        value={cpf}
++        erro={erros.cpf}
++        onChange={(e) => setCpf(formatarIdentificador(e.target.value))}
++      />
++
++      <TextField
++        id="conta-titulo"
++        label="Nº do título de eleitor"
++        obrigatorio
++        inputMode="numeric"
++        autoComplete="off"
++        placeholder="0000 0000 0000"
++        dica="Usamos CPF e título só para ligar a conta ao seu cadastro de voluntário."
++        value={titulo}
++        erro={erros.titulo_eleitor}
++        onChange={(e) => setTitulo(formatarTitulo(e.target.value))}
++      />
++
++      <TextField
++        id="conta-email"
++        label="E-mail"
++        obrigatorio
++        type="email"
++        inputMode="email"
++        autoComplete="username"
++        placeholder="exemplo@email.com"
++        value={email}
++        erro={erros.email}
++        onChange={(e) => setEmail(e.target.value)}
++      />
++
++      <TextField
++        id="conta-senha"
++        label="Senha"
++        obrigatorio
++        type="password"
++        autoComplete="new-password"
++        dica="Mínimo de 10 caracteres, com letra maiúscula, minúscula e número."
++        value={senha}
++        erro={erros.senha}
++        onChange={(e) => setSenha(e.target.value)}
++      />
++
++      {erroGeral && (
++        <p className={flow.text} role="alert">
++          {erroGeral}
++        </p>
++      )}
++
++      <button className={flow.primaryButton} type="submit" disabled={enviando}>
++        {enviando ? "Criando conta..." : "Criar conta"}
++      </button>
++
++      <p className={flow.text}>
++        Já tem conta? <Link href="/login">Entrar</Link>
++      </p>
++    </form>
++  );
++}
+diff --git a/components/cidadao/IdentificacaoForm.tsx b/components/cidadao/IdentificacaoForm.tsx
+index f7b8ead..bee7edd 100644
+--- a/components/cidadao/IdentificacaoForm.tsx
++++ b/components/cidadao/IdentificacaoForm.tsx
+@@ -5,186 +5,41 @@ import { useRouter } from "next/navigation";
+ 
+ import {
+   formatarIdentificador,
+-  formatarTitulo,
+   identificadorValido,
+   somenteDigitos,
+ } from "@/lib/cidadao/formatadores";
+-import {
+-  ELEITOR_VAZIO,
+-  salvarSessao,
+-  type SessaoCompleta,
+-} from "@/lib/cidadao/sessao";
++import { ELEITOR_VAZIO, salvarSessao } from "@/lib/cidadao/sessao";
+ 
+ import { TextField } from "./Field";
+ import flow from "./Flow.module.css";
+ 
+ interface IdentificacaoFormProps {
+   id: string;
+-  /** `cadastro` inicia o fluxo de voluntário; `login` abre "Meus dados". */
+-  modo: "cadastro" | "login";
+-  /** Rótulo do botão de envio. Sem ele, o envio fica por conta de quem usa o formulário (`form={id}`). */
+-  botao?: string;
+-}
+-
+-interface Erros {
+-  identificador?: string;
+-  codigo?: string;
+-}
+-
+-interface CadastroMesario {
+-  cpf: string;
+-  titulo_eleitor: string;
+-  nome_civil: string;
+-  data_nascimento: string;
+-  nome_mae: string;
+-  nome_pai: string | null;
+-  municipio: string;
+-  zona_eleitoral: number | string;
+-  secao_eleitoral: number | string;
+-  local_votacao: string;
+-  telefone: string | null;
+-  email: string | null;
+-  status_interesse: boolean | null;
+-}
+-
+-function ehObjeto(valor: unknown): valor is Record<string, unknown> {
+-  return typeof valor === "object" && valor !== null && !Array.isArray(valor);
+-}
+-
+-function ehCadastroMesario(valor: unknown): valor is CadastroMesario {
+-  if (!ehObjeto(valor)) {
+-    return false;
+-  }
+-
+-  return (
+-    typeof valor.cpf === "string" &&
+-    typeof valor.titulo_eleitor === "string" &&
+-    typeof valor.nome_civil === "string" &&
+-    typeof valor.data_nascimento === "string" &&
+-    typeof valor.nome_mae === "string" &&
+-    (typeof valor.nome_pai === "string" || valor.nome_pai === null) &&
+-    typeof valor.municipio === "string" &&
+-    (typeof valor.zona_eleitoral === "number" ||
+-      typeof valor.zona_eleitoral === "string") &&
+-    (typeof valor.secao_eleitoral === "number" ||
+-      typeof valor.secao_eleitoral === "string") &&
+-    typeof valor.local_votacao === "string" &&
+-    (typeof valor.telefone === "string" || valor.telefone === null) &&
+-    (typeof valor.email === "string" || valor.email === null) &&
+-    (typeof valor.status_interesse === "boolean" ||
+-      valor.status_interesse === null)
+-  );
+-}
+-
+-function criarSessao(mesario: CadastroMesario): SessaoCompleta {
+-  const data = mesario.data_nascimento.slice(0, 10).split("-").reverse().join("/");
+-
+-  return {
+-    eleitor: {
+-      cpf: formatarIdentificador(mesario.cpf),
+-      titulo: formatarTitulo(mesario.titulo_eleitor),
+-      nome: mesario.nome_civil,
+-      dataNascimento: data,
+-      nomeMae: mesario.nome_mae,
+-      nomePai: mesario.nome_pai ?? "",
+-      municipio: mesario.municipio,
+-      zona: String(mesario.zona_eleitoral),
+-      secao: String(mesario.secao_eleitoral),
+-      localVotacao: mesario.local_votacao,
+-    },
+-    contato: {
+-      telefone: mesario.telefone ?? "",
+-      whatsapp: false,
+-      email: mesario.email ?? "",
+-    },
+-    interesse: {
+-      status: mesario.status_interesse === false ? "desistiu" : "ativo",
+-      desde: new Date().toISOString(),
+-    },
+-  };
+ }
+ 
+ export default function IdentificacaoForm({
+   id,
+-  modo,
+-  botao,
+ }: Readonly<IdentificacaoFormProps>) {
+   const router = useRouter();
+   const [identificador, setIdentificador] = useState("");
+-  const [codigo, setCodigo] = useState("");
+-  const [erros, setErros] = useState<Erros>({});
+-  const [erroConsulta, setErroConsulta] = useState("");
+-  const [consultando, setConsultando] = useState(false);
++  const [erro, setErro] = useState<string>();
+ 
+-  async function enviar(evento: FormEvent<HTMLFormElement>) {
++  function enviar(evento: FormEvent<HTMLFormElement>) {
+     evento.preventDefault();
+ 
+-    const novosErros: Erros = {};
+-
+     if (!identificadorValido(identificador)) {
+-      novosErros.identificador =
+-        "Informe um CPF (11 dígitos) ou um nº de título (12 dígitos) válido.";
+-    }
+-
+-    if (!somenteDigitos(codigo)) {
+-      novosErros.codigo = "Informe o código de autenticação do e-Título.";
+-    }
+-
+-    setErros(novosErros);
+-
+-    if (Object.keys(novosErros).length > 0) {
+-      return;
+-    }
+-
+-    if (modo === "cadastro") {
+-      const cpf = somenteDigitos(identificador);
+-      salvarSessao({
+-        eleitor: {
+-          ...ELEITOR_VAZIO,
+-          cpf: cpf.length === 11 ? formatarIdentificador(cpf) : "",
+-        },
+-      });
+-      router.push("/cadastro/confirmacao");
++      setErro("Informe um CPF (11 dígitos) ou um nº de título (12 dígitos) válido.");
+       return;
+     }
+ 
+-    setConsultando(true);
+-    setErroConsulta("");
+-
+-    try {
+-      const resposta = await fetch("/api/mesarios/consultar", {
+-        method: "POST",
+-        headers: { "Content-Type": "application/json" },
+-        body: JSON.stringify({
+-          identificador: somenteDigitos(identificador),
+-          codigo: somenteDigitos(codigo),
+-        }),
+-      });
+-      const resultado: unknown = await resposta.json();
+-
+-      if (!resposta.ok) {
+-        const mensagem = ehObjeto(resultado) &&
+-          typeof resultado.message === "string"
+-            ? resultado.message
+-            : "Não foi possível consultar seu cadastro.";
+-        throw new Error(mensagem);
+-      }
+-
+-      if (!ehObjeto(resultado) || !ehCadastroMesario(resultado.data)) {
+-        throw new Error("Os dados retornados do cadastro são inválidos.");
+-      }
+-
+-      salvarSessao(criarSessao(resultado.data));
+-      router.push("/meus-dados");
+-    } catch (erro: unknown) {
+-      setErroConsulta(
+-        erro instanceof Error
+-          ? erro.message
+-          : "Erro de conexão ao consultar seu cadastro.",
+-      );
+-    } finally {
+-      setConsultando(false);
+-    }
++    const cpf = somenteDigitos(identificador);
++    salvarSessao({
++      eleitor: {
++        ...ELEITOR_VAZIO,
++        cpf: cpf.length === 11 ? formatarIdentificador(cpf) : "",
++      },
++    });
++    router.push("/cadastro/confirmacao");
+   }
+ 
+   return (
+@@ -197,44 +52,12 @@ export default function IdentificacaoForm({
+         autoComplete="off"
+         placeholder="000.000.000-00"
+         value={identificador}
+-        erro={erros.identificador}
++        erro={erro}
+         onChange={(e) => {
+           setIdentificador(formatarIdentificador(e.target.value));
+-          setErros((atuais) => ({ ...atuais, identificador: undefined }));
++          setErro(undefined);
+         }}
+       />
+-
+-      <TextField
+-        id={`${id}-codigo`}
+-        label="Código de autenticação"
+-        obrigatorio
+-        inputMode="numeric"
+-        autoComplete="one-time-code"
+-        placeholder="Código gerado pelo e-Título"
+-        dica="Gerado pelo aplicativo e-Título."
+-        value={codigo}
+-        erro={erros.codigo}
+-        onChange={(e) => {
+-          setCodigo(somenteDigitos(e.target.value));
+-          setErros((atuais) => ({ ...atuais, codigo: undefined }));
+-        }}
+-      />
+-
+-      {erroConsulta && (
+-        <p className={flow.text} role="alert">
+-          {erroConsulta}
+-        </p>
+-      )}
+-
+-      {botao && (
+-        <button
+-          className={flow.primaryButton}
+-          type="submit"
+-          disabled={consultando}
+-        >
+-          {consultando ? "Consultando..." : botao}
+-        </button>
+-      )}
+     </form>
+   );
+ }
+diff --git a/components/cidadao/LoginForm.tsx b/components/cidadao/LoginForm.tsx
+new file mode 100644
+index 0000000..409e75b
+--- /dev/null
++++ b/components/cidadao/LoginForm.tsx
+@@ -0,0 +1,80 @@
++"use client";
++
++import { useState, type FormEvent } from "react";
++import Link from "next/link";
++import { useRouter } from "next/navigation";
++
++import { destinoDoPapel, entrar } from "@/lib/api/acesso";
++
++import { TextField } from "./Field";
++import flow from "./Flow.module.css";
++
++export default function LoginForm() {
++  const router = useRouter();
++  const [email, setEmail] = useState("");
++  const [senha, setSenha] = useState("");
++  const [erro, setErro] = useState("");
++  const [enviando, setEnviando] = useState(false);
++
++  async function enviar(evento: FormEvent<HTMLFormElement>) {
++    evento.preventDefault();
++
++    if (!email.trim() || !senha) {
++      setErro("Informe o e-mail e a senha.");
++      return;
++    }
++
++    setEnviando(true);
++    setErro("");
++
++    const resultado = await entrar(email.trim(), senha);
++    setEnviando(false);
++
++    if (!resultado.ok) {
++      setErro(resultado.erro.mensagem);
++      return;
++    }
++
++    router.push(destinoDoPapel(resultado.dados));
++  }
++
++  return (
++    <form id="form-login" className={flow.form} onSubmit={enviar} noValidate>
++      <TextField
++        id="login-email"
++        label="E-mail"
++        obrigatorio
++        type="email"
++        inputMode="email"
++        autoComplete="username"
++        placeholder="exemplo@email.com"
++        value={email}
++        onChange={(e) => setEmail(e.target.value)}
++      />
++
++      <TextField
++        id="login-senha"
++        label="Senha"
++        obrigatorio
++        type="password"
++        autoComplete="current-password"
++        value={senha}
++        onChange={(e) => setSenha(e.target.value)}
++      />
++
++      {erro && (
++        <p className={flow.text} role="alert">
++          {erro}
++        </p>
++      )}
++
++      <button className={flow.primaryButton} type="submit" disabled={enviando}>
++        {enviando ? "Entrando..." : "Entrar"}
++      </button>
++
++      <p className={flow.text}>
++        Ainda não tem conta? <Link href="/criar-conta">Criar conta</Link>
++      </p>
++    </form>
++  );
++}
+diff --git a/components/cidadao/MeusDados.tsx b/components/cidadao/MeusDados.tsx
+index 3adc55f..7b2e727 100644
+--- a/components/cidadao/MeusDados.tsx
++++ b/components/cidadao/MeusDados.tsx
+@@ -1,9 +1,11 @@
+ "use client";
+ 
+-import { useRef } from "react";
++import { useEffect, useRef, useState } from "react";
+ import Link from "next/link";
+ import { useRouter } from "next/navigation";
+ 
++import { useAutenticacao } from "@/lib/api/auth";
++import { apiFetch } from "@/lib/api/client";
+ import { descreverZona, mascararTitulo } from "@/lib/cidadao/formatadores";
+ import { DIAS_PARA_NOVO_CADASTRO } from "@/lib/cidadao/regras";
+ import { atualizarSessao, useSessaoCompleta } from "@/lib/cidadao/sessao";
+@@ -23,16 +25,40 @@ function dataParaNovoCadastro(desdeIso: string) {
+ export default function MeusDados() {
+   const router = useRouter();
+   const sessao = useSessaoCompleta();
++  const auth = useAutenticacao();
++  const mesarioId = auth?.usuario.mesario_id ?? null;
+   const dialogo = useRef<HTMLDialogElement>(null);
++  const [erro, setErro] = useState("");
+ 
+-  if (!sessao) {
++  useEffect(() => {
++    if (auth === null) {
++      router.replace("/login");
++    }
++  }, [auth, router]);
++
++  if (!sessao || !auth) {
+     return null;
+   }
+ 
+   const { eleitor, contato, interesse } = sessao;
+   const ativo = interesse.status === "ativo";
+ 
+-  function retirarInteresse() {
++  async function retirarInteresse() {
++    setErro("");
++
++    const resposta = await apiFetch(`/api/mesarios/${mesarioId}`, {
++      method: "PUT",
++      body: JSON.stringify({ status_interesse: false }),
++    }).catch(() => null);
++
++    if (!resposta?.ok) {
++      dialogo.current?.close();
++      if (resposta?.status !== 401) {
++        setErro("Não foi possível retirar seu interesse. Tente novamente.");
++      }
++      return;
++    }
++
+     atualizarSessao((atual) => ({
+       ...atual,
+       interesse: { status: "desistiu", desde: new Date().toISOString() },
+@@ -84,6 +110,12 @@ export default function MeusDados() {
+         Caso seja convocado, você receberá as orientações pelos canais oficiais.
+       </StatusCard>
+ 
++      {erro && (
++        <p className={flow.text} role="alert">
++          {erro}
++        </p>
++      )}
++
+       <div className={flow.actions}>
+         <Link className={flow.primaryButton} href="/meus-dados/atualizar">
+           Atualizar Dados
+diff --git a/lib/api/acesso.ts b/lib/api/acesso.ts
+new file mode 100644
+index 0000000..8750014
+--- /dev/null
++++ b/lib/api/acesso.ts
+@@ -0,0 +1,102 @@
++import { ehCadastroMesario, criarSessao } from "@/lib/cidadao/cadastro";
++import { salvarSessao } from "@/lib/cidadao/sessao";
++
++import { salvarAutenticacao, type UsuarioLogado } from "./auth";
++import { apiFetch, lerErro, type ErroApi } from "./client";
++
++export type Resultado<T> = { ok: true; dados: T } | { ok: false; erro: ErroApi };
++
++const FALHA_REDE: ErroApi = {
++  mensagem: "Não foi possível conectar ao servidor. Tente novamente.",
++  campos: {},
++};
++
++/** Destino depois de entrar, conforme o papel. */
++export function destinoDoPapel(usuario: UsuarioLogado): string {
++  return usuario.papel === "mesario" ? "/meus-dados" : "/cartorio";
++}
++
++/** Carrega o cadastro ligado à conta e prepara a sessão das telas do cidadão. */
++async function carregarCadastro(usuario: UsuarioLogado): Promise<boolean> {
++  if (usuario.mesario_id === null) return false;
++
++  const resposta = await apiFetch(`/api/mesarios/${usuario.mesario_id}`);
++  if (!resposta.ok) return false;
++
++  const corpo: unknown = await resposta.json();
++  const dados = (corpo as { data?: unknown } | null)?.data;
++  if (!ehCadastroMesario(dados)) return false;
++
++  salvarSessao(criarSessao(dados));
++  return true;
++}
++
++export async function entrar(
++  email: string,
++  senha: string,
++): Promise<Resultado<UsuarioLogado>> {
++  try {
++    const resposta = await fetch("/api/login", {
++      method: "POST",
++      headers: { "Content-Type": "application/json" },
++      body: JSON.stringify({ email, senha }),
++    });
++
++    if (!resposta.ok) {
++      return {
++        ok: false,
++        erro: await lerErro(resposta, "Não foi possível entrar."),
++      };
++    }
++
++    const corpo = (await resposta.json()) as {
++      token: string;
++      expira_em: string;
++      usuario: UsuarioLogado;
++    };
++    salvarAutenticacao(corpo.token, corpo.expira_em, corpo.usuario);
++
++    if (corpo.usuario.papel === "mesario") {
++      const carregou = await carregarCadastro(corpo.usuario);
++      if (!carregou) {
++        return {
++          ok: false,
++          erro: {
++            mensagem:
++              "Sua conta ainda não está ligada a um cadastro de mesário. Procure o cartório eleitoral.",
++            campos: {},
++          },
++        };
++      }
++    }
++
++    return { ok: true, dados: corpo.usuario };
++  } catch {
++    return { ok: false, erro: FALHA_REDE };
++  }
++}
++
++export async function criarConta(dados: {
++  email: string;
++  senha: string;
++  cpf: string;
++  titulo_eleitor: string;
++}): Promise<Resultado<null>> {
++  try {
++    const resposta = await fetch("/api/usuarios", {
++      method: "POST",
++      headers: { "Content-Type": "application/json" },
++      body: JSON.stringify(dados),
++    });
++
++    if (!resposta.ok) {
++      return {
++        ok: false,
++        erro: await lerErro(resposta, "Não foi possível criar a conta."),
++      };
++    }
++    return { ok: true, dados: null };
++  } catch {
++    return { ok: false, erro: FALHA_REDE };
++  }
++}
+diff --git a/lib/api/auth.ts b/lib/api/auth.ts
+new file mode 100644
+index 0000000..f9ead90
+--- /dev/null
++++ b/lib/api/auth.ts
+@@ -0,0 +1,95 @@
++import { useMemo, useSyncExternalStore } from "react";
++
++import { limparSessao } from "@/lib/cidadao/sessao";
++
++export type Papel = "mesario" | "cartorio" | "administrador";
++
++export interface UsuarioLogado {
++  id: number;
++  email: string;
++  papel: Papel;
++  mesario_id: number | null;
++}
++
++interface Autenticacao {
++  token: string;
++  expiraEm: string;
++  usuario: UsuarioLogado;
++}
++
++// sessionStorage: o token some ao fechar a aba e não fica em disco.
++const CHAVE = "mesario:auth";
++const EVENTO = "mesario:auth:alterada";
++
++function lerBruto(): string | null {
++  try {
++    return window.sessionStorage.getItem(CHAVE);
++  } catch {
++    return null;
++  }
++}
++
++function interpretar(bruto: string | null | undefined): Autenticacao | null {
++  if (!bruto) return null;
++  try {
++    const dados = JSON.parse(bruto) as Partial<Autenticacao> | null;
++    if (
++      !dados ||
++      typeof dados.token !== "string" ||
++      typeof dados.expiraEm !== "string" ||
++      !dados.usuario
++    ) {
++      return null;
++    }
++    if (new Date(dados.expiraEm).getTime() <= Date.now()) return null;
++    return dados as Autenticacao;
++  } catch {
++    return null;
++  }
++}
++
++function gravar(auth: Autenticacao | null) {
++  try {
++    if (auth) window.sessionStorage.setItem(CHAVE, JSON.stringify(auth));
++    else window.sessionStorage.removeItem(CHAVE);
++  } catch {
++    // Sem sessionStorage o acesso não persiste entre telas.
++  }
++  window.dispatchEvent(new Event(EVENTO));
++}
++
++function assinar(aviso: () => void) {
++  window.addEventListener(EVENTO, aviso);
++  return () => window.removeEventListener(EVENTO, aviso);
++}
++
++export const obterToken = () => interpretar(lerBruto())?.token ?? null;
++
++export function salvarAutenticacao(
++  token: string,
++  expiraEm: string,
++  usuario: UsuarioLogado,
++) {
++  gravar({ token, expiraEm, usuario });
++}
++
++/** Encerra o acesso neste navegador: token e dados do cidadão. */
++export function encerrarAcesso() {
++  gravar(null);
++  limparSessao();
++}
++
++/**
++ * `undefined` = ainda hidratando; `null` = sem acesso válido.
++ */
++export function useAutenticacao(): Autenticacao | null | undefined {
++  const bruto = useSyncExternalStore<string | null | undefined>(
++    assinar,
++    lerBruto,
++    () => undefined,
++  );
++  return useMemo(
++    () => (bruto === undefined ? undefined : interpretar(bruto)),
++    [bruto],
++  );
++}
+diff --git a/lib/api/client.ts b/lib/api/client.ts
+new file mode 100644
+index 0000000..33ea020
+--- /dev/null
++++ b/lib/api/client.ts
+@@ -0,0 +1,58 @@
++import { encerrarAcesso, obterToken } from "./auth";
++
++export interface ErroApi {
++  mensagem: string;
++  campos: Record<string, string>;
++}
++
++/**
++ * fetch com `Authorization: Bearer`. Se o servidor responder 401 com um token
++ * enviado, o acesso expirou ou é inválido: limpa tudo e volta ao login.
++ */
++export async function apiFetch(
++  caminho: string,
++  init: RequestInit = {},
++): Promise<Response> {
++  const token = obterToken();
++  const headers = new Headers(init.headers);
++
++  if (init.body !== undefined && !headers.has("Content-Type")) {
++    headers.set("Content-Type", "application/json");
++  }
++  if (token) {
++    headers.set("Authorization", `Bearer ${token}`);
++  }
++
++  const resposta = await fetch(caminho, { ...init, headers });
++
++  if (resposta.status === 401 && token) {
++    encerrarAcesso();
++    if (window.location.pathname !== "/login") {
++      window.location.href = "/login";
++    }
++  }
++
++  return resposta;
++}
++
++export async function lerErro(
++  resposta: Response,
++  padrao = "Não foi possível concluir a operação.",
++): Promise<ErroApi> {
++  try {
++    const corpo: unknown = await resposta.json();
++    if (corpo && typeof corpo === "object") {
++      const { erro, campos } = corpo as { erro?: unknown; campos?: unknown };
++      return {
++        mensagem: typeof erro === "string" ? erro : padrao,
++        campos:
++          campos && typeof campos === "object"
++            ? (campos as Record<string, string>)
++            : {},
++      };
++    }
++  } catch {
++    // corpo vazio ou não JSON
++  }
++  return { mensagem: padrao, campos: {} };
++}
+diff --git a/lib/cidadao/cadastro.ts b/lib/cidadao/cadastro.ts
+new file mode 100644
+index 0000000..9398aab
+--- /dev/null
++++ b/lib/cidadao/cadastro.ts
+@@ -0,0 +1,80 @@
++import { formatarIdentificador, formatarTitulo } from "./formatadores";
++import type { SessaoCompleta } from "./sessao";
++
++/** Cadastro de mesário como a API devolve (sem o código do título). */
++export interface CadastroMesario {
++  id: number;
++  cpf: string;
++  titulo_eleitor: string;
++  nome_civil: string;
++  data_nascimento: string;
++  nome_mae: string;
++  nome_pai: string | null;
++  municipio: string;
++  zona_eleitoral: number | string;
++  secao_eleitoral: number | string;
++  local_votacao: string;
++  telefone: string | null;
++  email: string | null;
++  status_interesse: boolean | null;
++}
++
++function ehObjeto(valor: unknown): valor is Record<string, unknown> {
++  return typeof valor === "object" && valor !== null && !Array.isArray(valor);
++}
++
++export function ehCadastroMesario(valor: unknown): valor is CadastroMesario {
++  if (!ehObjeto(valor)) return false;
++
++  return (
++    typeof valor.id === "number" &&
++    typeof valor.cpf === "string" &&
++    typeof valor.titulo_eleitor === "string" &&
++    typeof valor.nome_civil === "string" &&
++    typeof valor.data_nascimento === "string" &&
++    typeof valor.nome_mae === "string" &&
++    (typeof valor.nome_pai === "string" || valor.nome_pai === null) &&
++    typeof valor.municipio === "string" &&
++    (typeof valor.zona_eleitoral === "number" ||
++      typeof valor.zona_eleitoral === "string") &&
++    (typeof valor.secao_eleitoral === "number" ||
++      typeof valor.secao_eleitoral === "string") &&
++    typeof valor.local_votacao === "string" &&
++    (typeof valor.telefone === "string" || valor.telefone === null) &&
++    (typeof valor.email === "string" || valor.email === null) &&
++    (typeof valor.status_interesse === "boolean" ||
++      valor.status_interesse === null)
++  );
++}
++
++export function criarSessao(mesario: CadastroMesario): SessaoCompleta {
++  const data = mesario.data_nascimento
++    .slice(0, 10)
++    .split("-")
++    .reverse()
++    .join("/");
++
++  return {
++    eleitor: {
++      cpf: formatarIdentificador(mesario.cpf),
++      titulo: formatarTitulo(mesario.titulo_eleitor),
++      nome: mesario.nome_civil,
++      dataNascimento: data,
++      nomeMae: mesario.nome_mae,
++      nomePai: mesario.nome_pai ?? "",
++      municipio: mesario.municipio,
++      zona: String(mesario.zona_eleitoral),
++      secao: String(mesario.secao_eleitoral),
++      localVotacao: mesario.local_votacao,
++    },
++    contato: {
++      telefone: mesario.telefone ?? "",
++      whatsapp: false,
++      email: mesario.email ?? "",
++    },
++    interesse: {
++      status: mesario.status_interesse === false ? "desistiu" : "ativo",
++      desde: new Date().toISOString(),
++    },
++  };
++}
+diff --git a/lib/server/auth/posse.ts b/lib/server/auth/posse.ts
+new file mode 100644
+index 0000000..776bc6d
+--- /dev/null
++++ b/lib/server/auth/posse.ts
+@@ -0,0 +1,9 @@
++import type { UsuarioPublico } from "./tipos";
++
++/** Cartório e administrador atendem qualquer cadastro. */
++export const ehEquipe = (usuario: UsuarioPublico) =>
++  usuario.papel === "cartorio" || usuario.papel === "administrador";
++
++/** O mesário só acessa o cadastro ligado à própria conta. */
++export const ehDono = (usuario: UsuarioPublico, mesarioId: number) =>
++  usuario.mesario_id !== null && usuario.mesario_id === mesarioId;
+diff --git a/lib/server/db/mesarios.ts b/lib/server/db/mesarios.ts
+new file mode 100644
+index 0000000..0c832e4
+--- /dev/null
++++ b/lib/server/db/mesarios.ts
+@@ -0,0 +1,136 @@
++import pool from "@/lib/db";
++
++// Lista explícita: o codigo_titulo nunca sai do banco por aqui.
++const COLUNAS = `id, cpf, titulo_eleitor, nome_civil,
++  to_char(data_nascimento, 'YYYY-MM-DD') AS data_nascimento,
++  nome_mae, nome_pai, municipio, zona_eleitoral, secao_eleitoral,
++  local_votacao, telefone, email, status_interesse, status_convocacao,
++  criado_em`;
++
++export interface MesarioRegistro {
++  id: number;
++  cpf: string;
++  titulo_eleitor: string;
++  nome_civil: string;
++  data_nascimento: string;
++  nome_mae: string;
++  nome_pai: string | null;
++  municipio: string;
++  zona_eleitoral: number;
++  secao_eleitoral: number;
++  local_votacao: string;
++  telefone: string | null;
++  email: string | null;
++  status_interesse: boolean | null;
++  status_convocacao: string | null;
++  criado_em: Date | null;
++}
++
++export async function listarMesarios(
++  limite: number,
++  offset: number,
++): Promise<{ itens: MesarioRegistro[]; total: number }> {
++  const [itens, total] = await Promise.all([
++    pool.query<MesarioRegistro>(
++      `SELECT ${COLUNAS} FROM mesarios ORDER BY id DESC LIMIT $1 OFFSET $2`,
++      [limite, offset],
++    ),
++    pool.query<{ total: string }>("SELECT count(*) AS total FROM mesarios"),
++  ]);
++  return { itens: itens.rows, total: Number(total.rows[0].total) };
++}
++
++export async function buscarMesarioPorId(
++  id: number,
++): Promise<MesarioRegistro | null> {
++  const resultado = await pool.query<MesarioRegistro>(
++    `SELECT ${COLUNAS} FROM mesarios WHERE id = $1`,
++    [id],
++  );
++  return resultado.rows[0] ?? null;
++}
++
++export async function buscarMesarioPorCpf(
++  cpf: string,
++): Promise<MesarioRegistro | null> {
++  const resultado = await pool.query<MesarioRegistro>(
++    `SELECT ${COLUNAS} FROM mesarios WHERE cpf = $1`,
++    [cpf],
++  );
++  return resultado.rows[0] ?? null;
++}
++
++export async function inserirMesario(dados: {
++  cpf: string;
++  titulo_eleitor: string;
++  nome_civil: string;
++  data_nascimento: string;
++  nome_mae: string;
++  nome_pai: string | null;
++  municipio: string;
++  zona_eleitoral: number;
++  secao_eleitoral: number;
++  local_votacao: string;
++  telefone: string | null;
++  email: string | null;
++}): Promise<MesarioRegistro> {
++  const resultado = await pool.query<MesarioRegistro>(
++    `INSERT INTO mesarios
++       (cpf, titulo_eleitor, nome_civil, data_nascimento, nome_mae, nome_pai,
++        municipio, zona_eleitoral, secao_eleitoral, local_votacao, telefone, email)
++     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
++     RETURNING ${COLUNAS}`,
++    [
++      dados.cpf,
++      dados.titulo_eleitor,
++      dados.nome_civil,
++      dados.data_nascimento,
++      dados.nome_mae,
++      dados.nome_pai,
++      dados.municipio,
++      dados.zona_eleitoral,
++      dados.secao_eleitoral,
++      dados.local_votacao,
++      dados.telefone,
++      dados.email,
++    ],
++  );
++  return resultado.rows[0];
++}
++
++/** Atualiza só os campos informados. Os nomes das colunas são fixos, nunca vêm da requisição. */
++export async function atualizarMesario(
++  id: number,
++  campos: {
++    telefone?: string | null;
++    email?: string | null;
++    status_interesse?: boolean;
++  },
++): Promise<MesarioRegistro | null> {
++  const atribuicoes: string[] = [];
++  const valores: unknown[] = [];
++
++  for (const coluna of ["telefone", "email", "status_interesse"] as const) {
++    const valor = campos[coluna];
++    if (valor !== undefined) {
++      valores.push(valor);
++      atribuicoes.push(`${coluna} = $${valores.length}`);
++    }
++  }
++
++  valores.push(id);
++  const resultado = await pool.query<MesarioRegistro>(
++    `UPDATE mesarios SET ${atribuicoes.join(", ")}
++     WHERE id = $${valores.length}
++     RETURNING ${COLUNAS}`,
++    valores,
++  );
++  return resultado.rows[0] ?? null;
++}
++
++export async function excluirMesario(id: number): Promise<boolean> {
++  const resultado = await pool.query("DELETE FROM mesarios WHERE id = $1", [
++    id,
++  ]);
++  return (resultado.rowCount ?? 0) > 0;
++}
+diff --git a/lib/server/validation/mesarios.ts b/lib/server/validation/mesarios.ts
+new file mode 100644
+index 0000000..dd8d672
+--- /dev/null
++++ b/lib/server/validation/mesarios.ts
+@@ -0,0 +1,87 @@
++import { z } from "zod";
++
++function somenteDigitos(tamanho: number, mensagem: string) {
++  return z
++    .string(mensagem)
++    .transform((valor) => valor.replace(/\D/g, ""))
++    .pipe(z.string().length(tamanho, mensagem));
++}
++
++// Aceita 12 ou "12" (o formulário do cartório envia texto, o do cidadão envia número).
++const inteiro = (mensagem: string) =>
++  z.union(
++    [
++      z.number().int(mensagem).nonnegative(mensagem),
++      z
++        .string()
++        .regex(/^\d{1,9}$/, mensagem)
++        .transform(Number),
++    ],
++    mensagem,
++  );
++
++const texto = (rotulo: string) =>
++  z
++    .string(`Informe ${rotulo}`)
++    .trim()
++    .min(1, `Informe ${rotulo}`)
++    .max(200, `${rotulo} deve ter no máximo 200 caracteres`);
++
++const telefone = z
++  .string()
++  .trim()
++  .max(30, "O telefone deve ter no máximo 30 caracteres");
++
++const email = z
++  .string()
++  .trim()
++  .toLowerCase()
++  .max(254, "O e-mail deve ter no máximo 254 caracteres")
++  .pipe(z.email("Informe um e-mail válido"));
++
++/** Campo opcional que aceita ausente, null ou texto vazio, tudo virando null. */
++function opcional<T extends z.ZodType<string>>(esquema: T) {
++  return z
++    .union([z.literal(""), z.null(), z.undefined(), esquema])
++    .transform((valor) => (valor === "" || valor === undefined ? null : valor));
++}
++
++export const criarMesarioSchema = z.object({
++  cpf: somenteDigitos(11, "O CPF deve ter 11 dígitos"),
++  titulo_eleitor: somenteDigitos(
++    12,
++    "O título de eleitor deve ter 12 dígitos",
++  ),
++  nome_civil: texto("o nome completo"),
++  data_nascimento: z.iso.date("Informe a data de nascimento no formato AAAA-MM-DD"),
++  nome_mae: texto("o nome da mãe"),
++  nome_pai: opcional(texto("o nome do pai")),
++  municipio: texto("o município"),
++  zona_eleitoral: inteiro("Informe a zona eleitoral"),
++  secao_eleitoral: inteiro("Informe a seção eleitoral"),
++  local_votacao: texto("o local de votação"),
++  telefone: opcional(telefone),
++  email: opcional(email),
++});
++
++export const atualizarMesarioSchema = z
++  .object({
++    telefone: opcional(telefone).optional(),
++    email: opcional(email).optional(),
++    status_interesse: z.boolean("Informe true ou false").optional(),
++  })
++  .refine(
++    (dados) =>
++      dados.telefone !== undefined ||
++      dados.email !== undefined ||
++      dados.status_interesse !== undefined,
++    "Informe ao menos um campo para atualizar",
++  );
++
++export const idSchema = z
++  .string()
++  .regex(/^\d{1,9}$/, "Identificador inválido")
++  .transform(Number);
++
++export type CriarMesarioEntrada = z.infer<typeof criarMesarioSchema>;
++export type AtualizarMesarioEntrada = z.infer<typeof atualizarMesarioSchema>;
