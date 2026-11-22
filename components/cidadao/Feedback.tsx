@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 
-import { DIAS_PARA_NOVO_CADASTRO } from "@/lib/cidadao/regras";
 import { useSessaoCompleta } from "@/lib/cidadao/sessao";
 
 import flow from "./Flow.module.css";
@@ -28,7 +27,8 @@ const TEXTOS = {
     tom: "alerta",
     titulo: "Interesse retirado",
     resumo: "Seu interesse foi retirado",
-    orientacao: `Você pode editar suas informações a qualquer momento e marcar seu interesse após ${DIAS_PARA_NOVO_CADASTRO} dias.`,
+    orientacao:
+      "Você pode editar suas informações e declarar seu interesse novamente a qualquer momento.",
   },
 } as const;
 

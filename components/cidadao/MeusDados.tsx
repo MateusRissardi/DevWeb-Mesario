@@ -7,20 +7,12 @@ import { useRouter } from "next/navigation";
 import { useAutenticacao } from "@/lib/api/auth";
 import { apiFetch } from "@/lib/api/client";
 import { descreverZona, mascararTitulo } from "@/lib/cidadao/formatadores";
-import { DIAS_PARA_NOVO_CADASTRO } from "@/lib/cidadao/regras";
 import { atualizarSessao, useSessaoCompleta } from "@/lib/cidadao/sessao";
 
 import { DataItem, DataList } from "./DataList";
 import flow from "./Flow.module.css";
 import StatusCard from "./StatusCard";
 import styles from "./MeusDados.module.css";
-
-function dataParaNovoCadastro(desdeIso: string) {
-  const data = new Date(desdeIso);
-  data.setDate(data.getDate() + DIAS_PARA_NOVO_CADASTRO);
-
-  return data.toLocaleDateString("pt-BR");
-}
 
 export default function MeusDados() {
   const router = useRouter();
@@ -68,6 +60,27 @@ export default function MeusDados() {
     router.push("/meus-dados/interesse-retirado");
   }
 
+  async function declararInteresse() {
+    setErro("");
+
+    const resposta = await apiFetch(`/api/mesarios/${mesarioId}`, {
+      method: "PUT",
+      body: JSON.stringify({ status_interesse: true }),
+    }).catch(() => null);
+
+    if (!resposta?.ok) {
+      if (resposta?.status !== 401) {
+        setErro("Não foi possível declarar seu interesse. Tente novamente.");
+      }
+      return;
+    }
+
+    atualizarSessao((atual) => ({
+      ...atual,
+      interesse: { status: "ativo", desde: new Date().toISOString() },
+    }));
+  }
+
   return (
     <section className={flow.content} aria-labelledby="titulo-pagina">
       <h1 className={flow.title} id="titulo-pagina">
@@ -99,7 +112,7 @@ export default function MeusDados() {
       >
         {ativo
           ? "Você está disponível para ser selecionado(a) pela Justiça Eleitoral."
-          : `Você retirou seu interesse. Um novo cadastro só poderá ser feito a partir de ${dataParaNovoCadastro(interesse.desde)}.`}
+          : "Você retirou seu interesse. Se mudar de ideia, é só declarar seu interesse novamente."}
       </StatusCard>
 
       <StatusCard
@@ -111,7 +124,7 @@ export default function MeusDados() {
       </StatusCard>
 
       {erro && (
-        <p className={flow.text} role="alert">
+        <p className={flow.alerta} role="alert">
           {erro}
         </p>
       )}
@@ -121,13 +134,21 @@ export default function MeusDados() {
           Atualizar Dados
         </Link>
 
-        {ativo && (
+        {ativo ? (
           <button
             className={flow.secondaryButton}
             type="button"
             onClick={() => dialogo.current?.showModal()}
           >
             Retirar Interesse
+          </button>
+        ) : (
+          <button
+            className={flow.secondaryButton}
+            type="button"
+            onClick={declararInteresse}
+          >
+            Declarar Interesse Novamente
           </button>
         )}
       </div>

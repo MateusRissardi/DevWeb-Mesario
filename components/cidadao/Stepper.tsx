@@ -1,10 +1,10 @@
 import styles from "./Stepper.module.css";
 
-const ETAPAS = ["Dados Pessoais", "Confirmação", "Contato", "Aceite"] as const;
+const ETAPAS = ["Meus dados", "Contato", "Aceite"] as const;
 
 interface StepperProps {
-  /** Etapa atual, de 1 a 4. */
-  atual: 1 | 2 | 3 | 4;
+  /** Etapa atual, de 1 a 3. */
+  atual: 1 | 2 | 3;
 }
 
 export default function Stepper({ atual }: Readonly<StepperProps>) {

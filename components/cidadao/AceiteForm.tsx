@@ -59,6 +59,12 @@ export default function AceiteForm() {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error(
+            "Já existe um cadastro com esses dados. Se o cadastro é seu, saia e crie a conta informando o CPF e o título; ou procure o cartório eleitoral.",
+          );
+        }
+
         const motivos =
           result.campos && typeof result.campos === "object"
             ? Object.values(result.campos as Record<string, string>).join(" ")
@@ -123,7 +129,7 @@ export default function AceiteForm() {
           onSubmit={enviar}
           noValidate
         >
-          {erro && <p className={flow.text} role="alert">{erro}</p>}
+          {erro && <p className={flow.alerta} role="alert">{erro}</p>}
 
           <CheckboxField
             id="aceite"

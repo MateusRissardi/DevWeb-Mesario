@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { autorizar, autorizarOpcional } from "@/lib/server/auth/guard";
+import { autorizar } from "@/lib/server/auth/guard";
 import {
   buscarMesarioPorCpf,
   inserirMesario,
@@ -62,10 +62,16 @@ export async function GET(request: Request) {
   }
 }
 
-// Manifestação de interesse. Pública, como o cadastro do cidadão sempre foi.
-// Se quem envia está logado com uma conta de mesário sem cadastro, a conta é
-// ligada ao novo cadastro.
+// Cadastro de mesário. Exige login:
+// - conta de mesário sem cadastro: o cadastro é criado e a conta é ligada a ele;
+// - conta de mesário que já tem cadastro: 409;
+// - cartório e administrador: registram a manifestação de outra pessoa, sem criar conta.
 export async function POST(request: Request) {
+  const acesso = await autorizar(request);
+  if (!acesso.ok) {
+    return acesso.resposta;
+  }
+
   const entrada = criarMesarioSchema.safeParse(await lerJson(request));
   if (!entrada.success) {
     return respostaErro(400, "Dados inválidos", {
@@ -74,13 +80,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const chamador = await autorizarOpcional(request);
-    if (!chamador.ok) {
-      return chamador.resposta;
-    }
-
     const contaDeMesario =
-      chamador.usuario?.papel === "mesario" ? chamador.usuario : null;
+      acesso.usuario.papel === "mesario" ? acesso.usuario : null;
     if (contaDeMesario?.mesario_id != null) {
       return respostaErro(409, "Sua conta já está ligada a um cadastro");
     }

@@ -112,6 +112,16 @@ export function limparSessao() {
   gravar(null);
 }
 
+/** `undefined` = ainda hidratando; depois, se há sessão de cadastro neste navegador. */
+export function useExisteSessao(): boolean | undefined {
+  const bruto = useSyncExternalStore<string | null | undefined>(
+    assinar,
+    lerBruto,
+    () => undefined,
+  );
+  return bruto === undefined ? undefined : interpretar(bruto) !== null;
+}
+
 export const temSessao = (s: SessaoCidadao | null): s is SessaoCidadao =>
   s !== null;
 
@@ -162,7 +172,7 @@ export function useSessaoExigida<T extends SessaoCidadao>(
   return !carregando && guarda(sessao) ? sessao : null;
 }
 
-/** Etapa 2 em diante: o cidadão já passou pela identificação. */
+/** O cadastro começa em "Meus dados"; a sessão é criada por GuardaCadastro. */
 export const useSessaoIniciada = () =>
   useSessaoExigida(temSessao, "/cadastro/dados");
 

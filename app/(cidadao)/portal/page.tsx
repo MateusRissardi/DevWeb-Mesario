@@ -23,12 +23,12 @@ export default function PortalPage() {
       </ul>
 
       <div className={styles.actions}>
-        <Link className={styles.primaryButton} href="/cadastro">
+        <Link className={styles.primaryButton} href="/criar-conta">
           Quero ser mesário
         </Link>
 
         <Link className={styles.secondaryButton} href="/login">
-          Já sou cadastrado
+          Entrar
         </Link>
       </div>
     </section>

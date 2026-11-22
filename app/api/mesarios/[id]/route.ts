@@ -49,7 +49,7 @@ export async function GET(request: Request, contexto: Contexto) {
 }
 
 // Atualiza contato e interesse. O dono (mesário) ou o cartório.
-// O mesário só pode retirar o interesse; reativar fica com o cartório.
+// O mesário pode retirar o interesse e declará-lo de novo.
 export async function PUT(request: Request, contexto: Contexto) {
   try {
     const id = await lerId(contexto);
@@ -70,10 +70,6 @@ export async function PUT(request: Request, contexto: Contexto) {
       return respostaErro(400, "Dados inválidos", {
         campos: camposDoErro(entrada.error),
       });
-    }
-
-    if (!ehEquipe(acesso.usuario) && entrada.data.status_interesse === true) {
-      return respostaErro(403, "Para reativar o interesse, procure o cartório");
     }
 
     const mesario = await atualizarMesario(id.data, entrada.data);

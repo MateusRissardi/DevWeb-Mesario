@@ -33,7 +33,7 @@ interface ContatoFormProps {
 export default function ContatoForm({ modo }: Readonly<ContatoFormProps>) {
   const sessao = useSessaoExigida<SessaoCidadao>(
     modo === "atualizar" ? temCadastro : temEleitor,
-    modo === "atualizar" ? "/login" : "/cadastro/confirmacao",
+    modo === "atualizar" ? "/login" : "/cadastro/dados",
   );
 
   if (!sessao) {
@@ -187,7 +187,7 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
         </InfoBox>
 
         {erroGeral && (
-          <p className={flow.text} role="alert">
+          <p className={flow.alerta} role="alert">
             {erroGeral}
           </p>
         )}
@@ -210,7 +210,7 @@ function Campos({ modo, contatoInicial }: Readonly<CamposProps>) {
       </section>
 
       {modo === "cadastro" && (
-        <WizardNav backHref="/cadastro/confirmacao" formId={FORM_ID} />
+        <WizardNav backHref="/cadastro/dados" formId={FORM_ID} />
       )}
     </>
   );
