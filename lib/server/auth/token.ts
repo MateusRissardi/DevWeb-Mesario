@@ -24,7 +24,6 @@ export async function criarToken(usuarioId: number) {
   return { token, expiraEm: new Date(expiraEm * 1000).toISOString() };
 }
 
-/** Devolve o id do usuário se o token for válido e não tiver expirado; senão, null. */
 export async function verificarToken(token: string): Promise<number | null> {
   const chave = segredo();
 

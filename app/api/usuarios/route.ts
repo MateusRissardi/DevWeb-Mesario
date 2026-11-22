@@ -9,9 +9,8 @@ import {
   criarUsuarioSchema,
 } from "@/lib/server/validation/usuarios";
 
-// Cadastro de conta. Pública para contas de mesário (com CPF e título de um
-// cadastro existente); qualquer outro papel exige um administrador.
 export async function POST(request: Request) {
+  //validação com zod que devolve 400 antes de tocar no banco
   const entrada = criarUsuarioSchema.safeParse(await lerJson(request));
   if (!entrada.success) {
     return respostaErro(400, "Dados inválidos", {
@@ -39,7 +38,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Lista as contas. Só administrador.
 export async function GET(request: Request) {
   try {
     const acesso = await autorizar(request, { papeis: ["administrador"] });

@@ -27,8 +27,7 @@ export interface Falha {
 /**
  * Cria uma conta. Sem token, só nasce conta de mesário. Com CPF e título ela já
  * nasce ligada ao cadastro existente; sem eles, fica sem cadastro e é ligada
- * quando a pessoa concluir o cadastro de voluntário. Outros papéis exigem
- * um administrador.
+ * quando a pessoa concluir o cadastro de voluntário. 
  */
 export async function criarConta(
   entrada: CriarUsuarioEntrada,
@@ -75,6 +74,7 @@ export async function criarConta(
     }
   }
 
+  //a senha vira hash antes de gravar; e-mail repetido vira 409
   const senhaHash = await gerarHash(entrada.senha);
 
   try {
@@ -101,7 +101,6 @@ export async function criarConta(
   }
 }
 
-/** Confere e-mail e senha. A mensagem de falha é a mesma para e-mail inexistente e senha errada. */
 export async function autenticar(
   email: string,
   senha: string,

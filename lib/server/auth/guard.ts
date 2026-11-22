@@ -34,11 +34,6 @@ async function usuarioDoToken(
   return id === null ? null : buscarPublicoPorId(id);
 }
 
-/**
- * Exige token válido (401 se faltar, for inválido ou tiver expirado) e,
- * se informado, um dos papéis permitidos (403 se o papel não bastar).
- * O papel vem do banco a cada requisição, não do token.
- */
 export async function autorizar(
   request: Request,
   opcoes: { papeis?: readonly Papel[] } = {},
@@ -63,7 +58,6 @@ export async function autorizar(
   return { ok: true, usuario };
 }
 
-/** Como autorizar, mas sem token a requisição segue como anônima. Token presente e inválido continua sendo 401. */
 export async function autorizarOpcional(
   request: Request,
 ): Promise<ResultadoAutorizacaoOpcional> {

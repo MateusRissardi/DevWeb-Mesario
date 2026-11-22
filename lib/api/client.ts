@@ -5,10 +5,6 @@ export interface ErroApi {
   campos: Record<string, string>;
 }
 
-/**
- * fetch com `Authorization: Bearer`. Se o servidor responder 401 com um token
- * enviado, o acesso expirou ou é inválido: limpa tudo e volta ao login.
- */
 export async function apiFetch(
   caminho: string,
   init: RequestInit = {},
@@ -52,7 +48,6 @@ export async function lerErro(
       };
     }
   } catch {
-    // corpo vazio ou não JSON
   }
   return { mensagem: padrao, campos: {} };
 }
