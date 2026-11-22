@@ -63,7 +63,7 @@ export default function LoginForm() {
       />
 
       {erro && (
-        <p className={flow.text} role="alert">
+        <p className={flow.alerta} role="alert">
           {erro}
         </p>
       )}
@@ -71,6 +71,10 @@ export default function LoginForm() {
       <button className={flow.primaryButton} type="submit" disabled={enviando}>
         {enviando ? "Entrando..." : "Entrar"}
       </button>
+
+      <p className={flow.text}>
+        <Link href="/esqueci-senha">Esqueci minha senha</Link>
+      </p>
 
       <p className={flow.text}>
         Ainda não tem conta? <Link href="/criar-conta">Criar conta</Link>

@@ -3,14 +3,14 @@ import { z } from "zod";
 import { PAPEIS } from "@/lib/server/auth/tipos";
 import type { CamposInvalidos } from "@/lib/server/http";
 
-const email = z
+export const email = z
   .string("Informe o e-mail")
   .trim()
   .toLowerCase()
   .max(254, "O e-mail deve ter no máximo 254 caracteres")
   .pipe(z.email("Informe um e-mail válido"));
 
-const senhaForte = z
+export const senhaForte = z
   .string("Informe a senha")
   .min(10, "A senha deve ter ao menos 10 caracteres")
   .refine(

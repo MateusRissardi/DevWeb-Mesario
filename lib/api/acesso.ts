@@ -78,6 +78,50 @@ export async function entrar(
   }
 }
 
+export async function solicitarRedefinicao(
+  email: string,
+): Promise<Resultado<string>> {
+  try {
+    const resposta = await fetch("/api/senha/esqueci", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!resposta.ok) {
+      return {
+        ok: false,
+        erro: await lerErro(resposta, "Não foi possível enviar o pedido."),
+      };
+    }
+    const corpo = (await resposta.json()) as { mensagem: string };
+    return { ok: true, dados: corpo.mensagem };
+  } catch {
+    return { ok: false, erro: FALHA_REDE };
+  }
+}
+
+export async function redefinirSenha(
+  token: string,
+  senha: string,
+): Promise<Resultado<null>> {
+  try {
+    const resposta = await fetch("/api/senha/redefinir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, senha }),
+    });
+    if (!resposta.ok) {
+      return {
+        ok: false,
+        erro: await lerErro(resposta, "Não foi possível redefinir a senha."),
+      };
+    }
+    return { ok: true, dados: null };
+  } catch {
+    return { ok: false, erro: FALHA_REDE };
+  }
+}
+
 export async function criarConta(dados: {
   email: string;
   senha: string;
