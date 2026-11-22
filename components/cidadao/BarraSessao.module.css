@@ -1,0 +1,30 @@
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.usuario {
+  color: #333333;
+  overflow-wrap: anywhere;
+}
+
+.sair {
+  padding: 0.25rem 1rem;
+  border: 1px solid #1351b4;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1351b4;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sair:hover {
+  background: #1351b4;
+  color: #ffffff;
+}

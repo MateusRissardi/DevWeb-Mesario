@@ -37,10 +37,14 @@ export default function CriarContaForm() {
     if (!senha) novos.senha = "Informe a senha.";
     // CPF e título são opcionais, mas só valem em par: ligam a conta a um cadastro existente.
     const informouCadastro = !!(cpf || titulo);
-    if (informouCadastro && somenteDigitos(cpf).length !== 11)
-      novos.cpf = "O CPF deve ter 11 dígitos.";
-    if (informouCadastro && somenteDigitos(titulo).length !== 12)
-      novos.titulo_eleitor = "O título deve ter 12 dígitos.";
+    if (informouCadastro) {
+      if (!cpf) novos.cpf = "Informe também o CPF, ou apague o título.";
+      else if (somenteDigitos(cpf).length !== 11)
+        novos.cpf = "O CPF deve ter 11 dígitos.";
+      if (!titulo) novos.titulo_eleitor = "Informe também o título, ou apague o CPF.";
+      else if (somenteDigitos(titulo).length !== 12)
+        novos.titulo_eleitor = "O título deve ter 12 dígitos.";
+    }
     setErros(novos);
     if (Object.keys(novos).length > 0) return;
 
@@ -108,7 +112,7 @@ export default function CriarContaForm() {
 
       <TextField
         id="conta-cpf"
-        label="CPF (opcional)"
+        label="CPF (opcional, junto com o título)"
         inputMode="numeric"
         autoComplete="off"
         placeholder="000.000.000-00"
@@ -119,7 +123,7 @@ export default function CriarContaForm() {
 
       <TextField
         id="conta-titulo"
-        label="Nº do título de eleitor (opcional)"
+        label="Nº do título de eleitor (opcional, junto com o CPF)"
         inputMode="numeric"
         autoComplete="off"
         placeholder="0000 0000 0000"
@@ -130,7 +134,7 @@ export default function CriarContaForm() {
       />
 
       {erroGeral && (
-        <p className={flow.text} role="alert">
+        <p className={flow.alerta} role="alert">
           {erroGeral}
         </p>
       )}

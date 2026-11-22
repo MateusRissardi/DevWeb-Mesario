@@ -109,3 +109,15 @@
   outline: 3px solid #ffcd07;
   outline-offset: 2px;
 }
+
+/* Mensagem de erro do formulário, nas cores de "danger" do Design System gov.br. */
+.alerta {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid var(--danger, #e52207);
+  background: var(--danger-alternative, #fde0db);
+  color: var(--danger, #e52207);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
