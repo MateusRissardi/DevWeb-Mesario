@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
+import { useAutenticacao } from "@/lib/api/auth";
+
 import SidebarNavItem from "./SidebarNavItem";
 import { sidebarNavItems } from "./sidebarConfig";
 import { useSidebar } from "./SidebarContext";
@@ -11,6 +13,12 @@ import styles from "./SidebarModule.module.css";
 export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen } = useSidebar();
+  const auth = useAutenticacao();
+  const itensVisiveis = sidebarNavItems.filter(
+    (item) =>
+      item.id !== "locais-secoes" ||
+      auth?.usuario.papel === "administrador",
+  );
 
   return (
     <aside
@@ -21,7 +29,7 @@ export default function Sidebar() {
     >
       <nav aria-label="Navegação principal">
         <ul className={styles.list}>
-          {sidebarNavItems.map((item) => {
+          {itensVisiveis.map((item) => {
             const isActive =
               item.href === "/cartorio"
                 ? pathname === item.href

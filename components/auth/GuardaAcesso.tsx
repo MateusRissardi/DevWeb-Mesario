@@ -7,6 +7,7 @@ import { useAutenticacao, type Papel } from "@/lib/api/auth";
 
 interface GuardaAcessoProps {
   papeis: readonly Papel[];
+  destinoSemPermissao?: string;
   children: ReactNode;
 }
 
@@ -16,6 +17,7 @@ interface GuardaAcessoProps {
  */
 export default function GuardaAcesso({
   papeis,
+  destinoSemPermissao = "/login",
   children,
 }: Readonly<GuardaAcessoProps>) {
   const router = useRouter();
@@ -24,9 +26,9 @@ export default function GuardaAcesso({
 
   useEffect(() => {
     if (auth !== undefined && !permitido) {
-      router.replace("/login");
+      router.replace(auth ? destinoSemPermissao : "/login");
     }
-  }, [auth, permitido, router]);
+  }, [auth, destinoSemPermissao, permitido, router]);
 
   return permitido ? <>{children}</> : null;
 }
