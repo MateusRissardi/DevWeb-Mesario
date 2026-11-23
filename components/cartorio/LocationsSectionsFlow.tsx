@@ -1,351 +1,685 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
-import {
-  BrButton,
-  BrIcon,
-  BrInput,
-  BrModal,
-  BrPagination,
-} from "@govbr-ds/webcomponents-react";
+import { apiFetch, lerErro } from "@/lib/api/client";
 
 import DataTable, { type DataTableColumn } from "./DataTable";
 import PageHeader from "./PageHeader";
-import StatusBadge, { StatusBadgeType } from "./StatusBadge";
 import styles from "./LocationsSectionsFlow.module.css";
 
-type View = "locations" | "polling-place" | "section";
-
-interface PollingPlace {
+interface SecaoEleitoral {
   id: number;
-  name: string;
-  city: string;
-  sections: number;
-  complete: number;
-  vacancies: number;
-  situation: StatusBadgeType;
+  numero_secao: number;
+  local_id: number;
+  criado_em: string | null;
 }
 
-interface SectionRow {
+interface LocalVotacao {
   id: number;
-  section: string;
-  president: string;
-  firstWorker: string;
-  secondWorker: string;
-  secretary: string;
-  vacancies: number;
+  nome: string;
+  endereco: string;
+  bairro: string | null;
+  cidade: string;
+  uf: string;
+  zona_eleitoral: number;
+  criado_em: string | null;
+  secoes: SecaoEleitoral[];
 }
 
-interface CompositionRow {
-  id: number;
-  role: string;
-  person: string;
-  situation: StatusBadgeType;
-  situationLabel: string;
-  action: string;
+interface FormularioLocal {
+  nome: string;
+  endereco: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  zona_eleitoral: string;
 }
 
-const pollingPlaces: readonly PollingPlace[] = [
-  { id: 1, name: "EEB João XXIII", city: "Ibirama", sections: 12, complete: 11, vacancies: 1, situation: StatusBadgeType.LocalAtencao },
-  { id: 2, name: "EEB Central", city: "Ibirama", sections: 8, complete: 8, vacancies: 0, situation: StatusBadgeType.LocalCompleto },
-  { id: 3, name: "E.M.C.S.", city: "José Boiteux", sections: 6, complete: 4, vacancies: 3, situation: StatusBadgeType.LocalCritico },
-];
+const FORMULARIO_LOCAL_VAZIO: FormularioLocal = {
+  nome: "",
+  endereco: "",
+  bairro: "",
+  cidade: "",
+  uf: "SC",
+  zona_eleitoral: "",
+};
 
-const sections: readonly SectionRow[] = [
-  { id: 181, section: "181", president: "João Silva", firstWorker: "Ana Costa", secondWorker: "Pedro Lima", secretary: "Maria Souza", vacancies: 0 },
-  { id: 184, section: "184", president: "Vaga", firstWorker: "Carlos Silva", secondWorker: "Júlia Reis", secretary: "Lucas Costa", vacancies: 1 },
-  { id: 183, section: "183", president: "Ana Souza", firstWorker: "Paulo Lima", secondWorker: "Marina Reis", secretary: "Luiz Costa", vacancies: 0 },
-];
+function mensagemErro(erro: unknown, padrao: string) {
+  return erro instanceof Error ? erro.message : padrao;
+}
 
-const composition: readonly CompositionRow[] = [
-  { id: 1, role: "Presidente", person: "—", situation: StatusBadgeType.PrioridadeCritica, situationLabel: "Vaga não preenchida", action: "Encontrar voluntário" },
-  { id: 2, role: "1º mesário", person: "Carlos Silva", situation: StatusBadgeType.VoluntarioPreSelecionado, situationLabel: "Pré-selecionado", action: "Ver perfil" },
-  { id: 3, role: "2º mesário", person: "Júlia Reis", situation: StatusBadgeType.VoluntarioSelecionada, situationLabel: "Selecionada", action: "Ver perfil" },
-  { id: 4, role: "Secretário", person: "Lucas Costa", situation: StatusBadgeType.VoluntarioSelecionada, situationLabel: "Selecionada", action: "Ver perfil" },
-];
+async function exigirSucesso(resposta: Response, padrao: string) {
+  if (!resposta.ok) {
+    throw new Error((await lerErro(resposta, padrao)).mensagem);
+  }
+}
 
-function Summary({ items }: { items: readonly { label: string; value: number }[] }) {
+function Campo({
+  id,
+  label,
+  value,
+  onChange,
+  required = true,
+  maxLength,
+  type = "text",
+  min,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  maxLength?: number;
+  type?: "text" | "number";
+  min?: number;
+}) {
   return (
-    <section className={styles.summary} aria-label="Resumo de locais e seções">
-      {items.map((item) => (
-        <div className={styles.summaryItem} key={item.label}>
-          <strong>{item.label}</strong>
-          <span>{item.value}</span>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function FilterTag({ label }: { label: string }) {
-  return (
-    <span className={styles.filterTag}>
-      {label}
-      <BrButton className={styles.removeFilterButton} emphasis="tertiary" shape="circle" type="button" aria-label={`Remover filtro ${label}`}>
-        <BrIcon iconName="fa6-solid:xmark" source="auto" width="12" height="12" aria-hidden="true" />
-      </BrButton>
-    </span>
-  );
-}
-
-function SearchActions({ placeholder, activeFilters = 1 }: { placeholder: string; activeFilters?: number }) {
-  return (
-    <>
-      <BrInput className={styles.search} type="search" density="small" highlight placeholder={placeholder} ariaLabel={placeholder}>
-        <BrButton className={styles.searchButton} slot="action" emphasis="tertiary" shape="circle" type="button" aria-label="Executar busca">
-          <BrIcon iconName="fa6-solid:magnifying-glass" source="auto" width="16" height="16" aria-hidden="true" />
-        </BrButton>
-      </BrInput>
-      <BrButton className={styles.filterButton} emphasis="primary" density="small" type="button" aria-label={`Abrir filtros, ${activeFilters} filtros ativos`}>
-        Filtros
-        <span className={styles.filterCount}>{activeFilters}</span>
-      </BrButton>
-    </>
+    <label className={styles.field} htmlFor={id}>
+      <span>{label}</span>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        required={required}
+        maxLength={maxLength}
+        min={min}
+        step={type === "number" ? 1 : undefined}
+      />
+    </label>
   );
 }
 
 export default function LocationsSectionsFlow() {
-  const [view, setView] = useState<View>("locations");
-  const [findVolunteerOpen, setFindVolunteerOpen] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
+  const [locais, setLocais] = useState<LocalVotacao[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [localSelecionadoId, setLocalSelecionadoId] = useState<number | null>(
+    null,
+  );
+  const [formularioLocalAberto, setFormularioLocalAberto] = useState(false);
+  const [localEmEdicaoId, setLocalEmEdicaoId] = useState<number | null>(null);
+  const [formularioLocal, setFormularioLocal] = useState<FormularioLocal>(
+    FORMULARIO_LOCAL_VAZIO,
+  );
+  const [formularioSecaoAberto, setFormularioSecaoAberto] = useState(false);
+  const [secaoEmEdicaoId, setSecaoEmEdicaoId] = useState<number | null>(null);
+  const [numeroSecao, setNumeroSecao] = useState("");
 
-  const locationColumns: readonly DataTableColumn<PollingPlace>[] = [
+  async function carregarLocais() {
+    const resposta = await apiFetch("/api/locais-secoes");
+    await exigirSucesso(resposta, "Não foi possível carregar os locais.");
+
+    const corpo = (await resposta.json()) as { data?: unknown };
+    if (!Array.isArray(corpo.data)) {
+      throw new Error("O servidor retornou uma lista de locais inválida.");
+    }
+
+    setLocais(corpo.data as LocalVotacao[]);
+  }
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregar() {
+      try {
+        await carregarLocais();
+        if (ativo) setErro(null);
+      } catch (falha) {
+        if (ativo) {
+          setErro(mensagemErro(falha, "Não foi possível carregar os locais."));
+        }
+      } finally {
+        if (ativo) setCarregando(false);
+      }
+    }
+
+    void carregar();
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const localSelecionado = locais.find(
+    (local) => local.id === localSelecionadoId,
+  );
+  const locaisFiltrados = useMemo(() => {
+    const termo = busca.trim().toLocaleLowerCase("pt-BR");
+    if (!termo) return locais;
+    return locais.filter((local) =>
+      [
+        local.nome,
+        local.endereco,
+        local.bairro ?? "",
+        local.cidade,
+        local.uf,
+        String(local.zona_eleitoral),
+      ]
+        .join(" ")
+        .toLocaleLowerCase("pt-BR")
+        .includes(termo),
+    );
+  }, [busca, locais]);
+
+  function abrirNovoLocal() {
+    setLocalEmEdicaoId(null);
+    setFormularioLocal(FORMULARIO_LOCAL_VAZIO);
+    setFormularioLocalAberto(true);
+    setErro(null);
+    setAviso(null);
+  }
+
+  function abrirEdicaoLocal(local: LocalVotacao) {
+    setLocalEmEdicaoId(local.id);
+    setFormularioLocal({
+      nome: local.nome,
+      endereco: local.endereco,
+      bairro: local.bairro ?? "",
+      cidade: local.cidade,
+      uf: local.uf,
+      zona_eleitoral: String(local.zona_eleitoral),
+    });
+    setFormularioLocalAberto(true);
+    setErro(null);
+    setAviso(null);
+  }
+
+  function fecharFormularioLocal() {
+    setFormularioLocalAberto(false);
+    setLocalEmEdicaoId(null);
+    setFormularioLocal(FORMULARIO_LOCAL_VAZIO);
+  }
+
+  async function salvarLocal(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSalvando(true);
+    setErro(null);
+    setAviso(null);
+
+    const editando = localEmEdicaoId !== null;
+    try {
+      const resposta = await apiFetch(
+        editando
+          ? `/api/locais-secoes/locais/${localEmEdicaoId}`
+          : "/api/locais-secoes",
+        {
+          method: editando ? "PUT" : "POST",
+          body: JSON.stringify({
+            ...formularioLocal,
+            bairro: formularioLocal.bairro.trim() || null,
+            uf: formularioLocal.uf.trim().toUpperCase(),
+            zona_eleitoral: Number(formularioLocal.zona_eleitoral),
+          }),
+        },
+      );
+      await exigirSucesso(resposta, "Não foi possível salvar o local.");
+      await carregarLocais();
+      fecharFormularioLocal();
+      setAviso(editando ? "Local atualizado." : "Local cadastrado.");
+    } catch (falha) {
+      setErro(mensagemErro(falha, "Não foi possível salvar o local."));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function removerLocal(local: LocalVotacao) {
+    const confirmacao = window.confirm(
+      `Excluir "${local.nome}"? As ${local.secoes.length} seção(ões) vinculada(s) também serão excluídas.`,
+    );
+    if (!confirmacao) return;
+
+    setSalvando(true);
+    setErro(null);
+    setAviso(null);
+    try {
+      const resposta = await apiFetch(
+        `/api/locais-secoes/locais/${local.id}`,
+        { method: "DELETE" },
+      );
+      await exigirSucesso(resposta, "Não foi possível excluir o local.");
+      await carregarLocais();
+      if (localSelecionadoId === local.id) setLocalSelecionadoId(null);
+      setAviso("Local excluído.");
+    } catch (falha) {
+      setErro(mensagemErro(falha, "Não foi possível excluir o local."));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function abrirNovaSecao() {
+    setSecaoEmEdicaoId(null);
+    setNumeroSecao("");
+    setFormularioSecaoAberto(true);
+    setErro(null);
+    setAviso(null);
+  }
+
+  function abrirEdicaoSecao(secao: SecaoEleitoral) {
+    setSecaoEmEdicaoId(secao.id);
+    setNumeroSecao(String(secao.numero_secao));
+    setFormularioSecaoAberto(true);
+    setErro(null);
+    setAviso(null);
+  }
+
+  function fecharFormularioSecao() {
+    setFormularioSecaoAberto(false);
+    setSecaoEmEdicaoId(null);
+    setNumeroSecao("");
+  }
+
+  async function salvarSecao(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!localSelecionado) return;
+
+    setSalvando(true);
+    setErro(null);
+    setAviso(null);
+    const editando = secaoEmEdicaoId !== null;
+    try {
+      const resposta = await apiFetch(
+        editando
+          ? `/api/locais-secoes/${secaoEmEdicaoId}`
+          : `/api/locais-secoes/locais/${localSelecionado.id}/secoes`,
+        {
+          method: editando ? "PUT" : "POST",
+          body: JSON.stringify({ numero_secao: Number(numeroSecao) }),
+        },
+      );
+      await exigirSucesso(resposta, "Não foi possível salvar a seção.");
+      await carregarLocais();
+      fecharFormularioSecao();
+      setAviso(editando ? "Seção atualizada." : "Seção cadastrada.");
+    } catch (falha) {
+      setErro(mensagemErro(falha, "Não foi possível salvar a seção."));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function removerSecao(secao: SecaoEleitoral) {
+    if (
+      !window.confirm(
+        `Excluir a seção ${secao.numero_secao} deste local?`,
+      )
+    ) {
+      return;
+    }
+
+    setSalvando(true);
+    setErro(null);
+    setAviso(null);
+    try {
+      const resposta = await apiFetch(`/api/locais-secoes/${secao.id}`, {
+        method: "DELETE",
+      });
+      await exigirSucesso(resposta, "Não foi possível excluir a seção.");
+      await carregarLocais();
+      setAviso("Seção excluída.");
+    } catch (falha) {
+      setErro(mensagemErro(falha, "Não foi possível excluir a seção."));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const colunasLocais: readonly DataTableColumn<LocalVotacao>[] = [
     {
-      key: "name",
+      key: "nome",
       label: "Local de votação",
-      columnWidth: "1fr",
-      render: (row) => row.name,
+      columnWidth: "1.5fr",
+      render: (local) => (
+        <div className={styles.localCell}>
+          <strong>{local.nome}</strong>
+          <span>{local.endereco}</span>
+        </div>
+      ),
     },
     {
-      key: "city",
+      key: "cidade",
       label: "Município",
-      columnWidth: "0.8fr",
-      render: (row) => row.city,
+      columnWidth: "1fr",
+      render: (local) => `${local.cidade} - ${local.uf}`,
     },
     {
-      key: "sections",
+      key: "zona",
+      label: "Zona",
+      columnWidth: "80px",
+      render: (local) => local.zona_eleitoral,
+    },
+    {
+      key: "secoes",
       label: "Seções",
-      columnWidth: "90px",
-      render: (row) => row.sections,
+      columnWidth: "80px",
+      render: (local) => local.secoes.length,
     },
     {
-      key: "complete",
-      label: "Completas",
-      columnWidth: "100px",
-      render: (row) => row.complete,
-    },
-    {
-      key: "vacancies",
-      label: "Vagas",
-      columnWidth: "90px",
-      render: (row) => row.vacancies,
-    },
-    {
-      key: "situation",
-      label: "Situação",
-      columnWidth: "150px",
-      render: (row) => (
-        <StatusBadge
-          className={styles.badge}
-          status={row.situation}
-        />
-      ),
-    },
-    {
-      key: "action",
-      label: "Ação",
-      columnWidth: "190px",
-      horizontalAlignment: "center",
-      render: () => (
-        <BrButton
-          className={styles.rowAction}
-          emphasis="tertiary"
-          density="small"
-          type="button"
-          onClick={() => setView("polling-place")}
-        >
-          Ver seções
-
-          <BrIcon
-            iconName="fa6-solid:arrow-right"
-            source="auto"
-            width="12"
-            height="12"
-            aria-hidden="true"
-          />
-        </BrButton>
+      key: "acoes",
+      label: "Ações",
+      columnWidth: "250px",
+      render: (local) => (
+        <div className={styles.rowActions}>
+          <button
+            className={styles.textButton}
+            type="button"
+            disabled={salvando}
+            onClick={() => setLocalSelecionadoId(local.id)}
+          >
+            Gerenciar seções
+          </button>
+          <button
+            className={styles.textButton}
+            type="button"
+            disabled={salvando}
+            onClick={() => abrirEdicaoLocal(local)}
+          >
+            Editar
+          </button>
+          <button
+            className={styles.dangerButton}
+            type="button"
+            disabled={salvando}
+            onClick={() => void removerLocal(local)}
+          >
+            Excluir
+          </button>
+        </div>
       ),
     },
   ];
 
-  const sectionColumns: readonly DataTableColumn<SectionRow>[] = [
-    { key: "section", label: "Seção", columnWidth: "72px", render: (row) => row.section },
-    { key: "president", label: "Presidente", columnWidth: "1.15fr", render: (row) => <span className={row.vacancies ? styles.vacancyText : undefined}>{row.president}</span> },
-    { key: "firstWorker", label: "1º mesário", columnWidth: "1.1fr", render: (row) => row.firstWorker },
-    { key: "secondWorker", label: "2º mesário", columnWidth: "1.1fr", render: (row) => row.secondWorker },
-    { key: "secretary", label: "Secretário", columnWidth: "1.1fr", render: (row) => row.secretary },
+  const colunasSecoes: readonly DataTableColumn<SecaoEleitoral>[] = [
     {
-      key: "situation", label: "Situação", columnWidth: "104px",
-      render: (row) => <StatusBadge className={styles.badge} status={row.vacancies ? StatusBadgeType.LocalAtencao : StatusBadgeType.LocalCompleto} label={row.vacancies ? "1 vaga" : "Completa"} />,
+      key: "numero",
+      label: "Número da seção",
+      columnWidth: "1fr",
+      render: (secao) => secao.numero_secao,
     },
     {
-      key: "action", label: "Ação", columnWidth: "72px", horizontalAlignment: "center",
-      render: (row) => (
-        <BrButton className={styles.iconAction} emphasis="tertiary" shape="circle" type="button" aria-label={`Abrir seção ${row.section}`} onClick={() => setView("section")}>
-          <BrIcon iconName="fa6-solid:chevron-right" source="auto" width="12" height="12" aria-hidden="true" />
-        </BrButton>
+      key: "acoes",
+      label: "Ações",
+      columnWidth: "180px",
+      render: (secao) => (
+        <div className={styles.rowActions}>
+          <button
+            className={styles.textButton}
+            type="button"
+            disabled={salvando}
+            onClick={() => abrirEdicaoSecao(secao)}
+          >
+            Editar
+          </button>
+          <button
+            className={styles.dangerButton}
+            type="button"
+            disabled={salvando}
+            onClick={() => void removerSecao(secao)}
+          >
+            Excluir
+          </button>
+        </div>
       ),
     },
   ];
 
-  const compositionColumns: readonly DataTableColumn<CompositionRow>[] = [
-    {
-      key: "role",
-      label: "Função",
-      columnWidth: "160px",
-      render: (row) => row.role,
-    },
-    {
-      key: "person",
-      label: "Pessoa",
-      columnWidth: "fill",
-      render: (row) => row.person,
-    },
-    {
-      key: "situation",
-      label: "Situação",
-      columnWidth: "190px",
-      render: (row) => (
-        <StatusBadge
-          className={styles.compositionBadge}
-          status={row.situation}
-          label={row.situationLabel}
-        />
-      ),
-    },
-    {
-      key: "action",
-      label: "Ação",
-      columnWidth: "220px",
-      horizontalAlignment: "center",
-      render: (row) => (
-        <BrButton
-          className={styles.rowAction}
-          emphasis="tertiary"
-          density="small"
-          type="button"
-          onClick={() => row.id === 1 && setFindVolunteerOpen(true)}
-        >
-          {row.action}
-
-          <BrIcon
-            iconName="fa6-solid:arrow-right"
-            source="auto"
-            width="12"
-            height="12"
-            aria-hidden="true"
-          />
-        </BrButton>
-      ),
-    },
-  ];
-
-  if (view === "polling-place") {
-    return (
-      <div className={styles.page}>
-        <PageHeader title="EEB João XXIII" description="Ibirama · 12ª Zona Eleitoral" action={<BrButton emphasis="secondary" density="small" type="button" onClick={() => setView("locations")}>Voltar</BrButton>} />
-        <Summary items={[{ label: "Seções", value: 12 }, { label: "Completas", value: 11 }, { label: "Com vagas", value: 1 }, { label: "Vagas abertas", value: 1 }]} />
-        <DataTable
-          title="Seções do local" columns={sectionColumns} rows={sections} getRowKey={(row) => row.id} density="medium" overflow="truncate"
-          headerActions={<SearchActions placeholder="Buscar por seção ou pessoa..." />}
-          headerContent={<FilterTag label="Situação: Com vaga" />}
-          footer={<BrPagination variant="contextual" current={1} total={1} totalItems={12} perPage={10} ariaLabel="Paginação das seções do local" />}
-        />
-      </div>
-    );
-  }
-
-  if (view === "section") {
-    return (
-      <div className={styles.page}>
-        <PageHeader title="Seção 184" description="EEB João XXIII · Ibirama · 12ª Zona Eleitoral" action={<BrButton emphasis="secondary" density="small" type="button" onClick={() => setView("polling-place")}>Voltar</BrButton>} />
-        <section className={styles.sectionStatus} aria-label="Situação da seção">
-          <strong>Situação da seção</strong>
-          <span>1 vaga aberta · Presidente sem responsável</span>
-          <StatusBadge className={styles.badge} status={StatusBadgeType.LocalAtencao} />
-        </section>
-        <DataTable title="Composição da mesa" columns={compositionColumns} rows={composition} getRowKey={(row) => row.id} density="medium" overflow="truncate" />
-        <section className={styles.operationalNotes}>
-          <h3>Observações operacionais</h3>
-          <p>A seção precisa de um presidente para completar a composição.</p>
-          <p>Pendência “Seção incompleta” criada automaticamente.</p>
-        </section>
-        <VolunteerModal open={findVolunteerOpen} onClose={() => setFindVolunteerOpen(false)} onSelect={() => { setFindVolunteerOpen(false); setConfirmOpen(true); }} />
-        <ConfirmModal open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={() => { setConfirmOpen(false); setSuccessOpen(true); }} />
-        <SuccessModal open={successOpen} onClose={() => setSuccessOpen(false)} />
-      </div>
-    );
-  }
+  const totalSecoes = locais.reduce(
+    (total, local) => total + local.secoes.length,
+    0,
+  );
 
   return (
     <div className={styles.page}>
-      <PageHeader title="Locais e seções" description="Acompanhe a composição das seções eleitorais sob responsabilidade da sua unidade." />
-      <Summary items={[{ label: "Locais de votação", value: 24 }, { label: "Seções", value: 184 }, { label: "Seções completas", value: 171 }, { label: "Seções com vagas", value: 13 }]} />
-      <DataTable
-        title="Locais da unidade" columns={locationColumns} rows={pollingPlaces} getRowKey={(row) => row.id} density="medium" overflow="truncate"
-        headerActions={<SearchActions placeholder="Buscar por local ou município..." activeFilters={2} />}
-        headerContent={<><FilterTag label="Situação: Com vagas" /><FilterTag label="Município: Ibirama" /></>}
-        footer={<BrPagination variant="contextual" current={1} total={3} totalItems={24} perPage={10} ariaLabel="Paginação dos locais da unidade" />}
-      />
+      {localSelecionado ? (
+        <>
+          <PageHeader
+            title={localSelecionado.nome}
+            description={`${localSelecionado.endereco} · ${localSelecionado.cidade}/${localSelecionado.uf} · ${localSelecionado.zona_eleitoral}ª Zona`}
+            action={
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                onClick={() => {
+                  setLocalSelecionadoId(null);
+                  fecharFormularioSecao();
+                }}
+              >
+                Voltar aos locais
+              </button>
+            }
+          />
+          <section className={styles.summary} aria-label="Resumo do local">
+            <div className={styles.summaryItem}>
+              <strong>Seções cadastradas</strong>
+              <span>{localSelecionado.secoes.length}</span>
+            </div>
+            <div className={styles.summaryItem}>
+              <strong>Bairro</strong>
+              <span>{localSelecionado.bairro || "Não informado"}</span>
+            </div>
+            <div className={styles.summaryItem}>
+              <strong>Município</strong>
+              <span>{localSelecionado.cidade}</span>
+            </div>
+          </section>
+          <PageHeader
+            title="Seções do local"
+            description="Cadastre, edite ou remova as seções eleitorais deste local."
+            action={
+              <button
+                className={styles.primaryButton}
+                type="button"
+                disabled={salvando}
+                onClick={abrirNovaSecao}
+              >
+                Nova seção
+              </button>
+            }
+          />
+          {formularioSecaoAberto && (
+            <form className={styles.formPanel} onSubmit={salvarSecao}>
+              <h3>
+                {secaoEmEdicaoId === null ? "Cadastrar seção" : "Editar seção"}
+              </h3>
+              <div className={styles.formGrid}>
+                <Campo
+                  id="numero-secao"
+                  label="Número da seção"
+                  type="number"
+                  min={1}
+                  value={numeroSecao}
+                  onChange={setNumeroSecao}
+                />
+              </div>
+              <div className={styles.formActions}>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  disabled={salvando}
+                  onClick={fecharFormularioSecao}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  type="submit"
+                  disabled={salvando}
+                >
+                  {salvando ? "Salvando..." : "Salvar seção"}
+                </button>
+              </div>
+            </form>
+          )}
+          {erro && <p className={styles.error} role="alert">{erro}</p>}
+          {aviso && <p className={styles.success} role="status">{aviso}</p>}
+          {carregando ? (
+            <p className={styles.emptyState} role="status">Carregando seções...</p>
+          ) : localSelecionado.secoes.length === 0 ? (
+            <p className={styles.emptyState}>
+              Nenhuma seção cadastrada para este local.
+            </p>
+          ) : (
+            <DataTable
+              title="Seções cadastradas"
+              columns={colunasSecoes}
+              rows={localSelecionado.secoes}
+              getRowKey={(secao) => secao.id}
+              density="medium"
+              overflow="truncate"
+            />
+          )}
+        </>
+      ) : (
+        <>
+          <PageHeader
+            title="Locais e seções"
+            description="Consulte e mantenha os locais de votação e suas seções eleitorais."
+            action={
+              <button
+                className={styles.primaryButton}
+                type="button"
+                onClick={abrirNovoLocal}
+              >
+                Novo local
+              </button>
+            }
+          />
+          <section className={styles.summary} aria-label="Resumo de locais e seções">
+            <div className={styles.summaryItem}>
+              <strong>Locais de votação</strong>
+              <span>{locais.length}</span>
+            </div>
+            <div className={styles.summaryItem}>
+              <strong>Seções cadastradas</strong>
+              <span>{totalSecoes}</span>
+            </div>
+            <div className={styles.summaryItem}>
+              <strong>Municípios</strong>
+              <span>{new Set(locais.map((local) => local.cidade)).size}</span>
+            </div>
+          </section>
+          {formularioLocalAberto && (
+            <form className={styles.formPanel} onSubmit={salvarLocal}>
+              <h3>
+                {localEmEdicaoId === null ? "Cadastrar local" : "Editar local"}
+              </h3>
+              <div className={styles.formGrid}>
+                <Campo
+                  id="nome-local"
+                  label="Nome do local"
+                  maxLength={150}
+                  value={formularioLocal.nome}
+                  onChange={(nome) =>
+                    setFormularioLocal((atual) => ({ ...atual, nome }))
+                  }
+                />
+                <Campo
+                  id="endereco-local"
+                  label="Endereço"
+                  maxLength={255}
+                  value={formularioLocal.endereco}
+                  onChange={(endereco) =>
+                    setFormularioLocal((atual) => ({ ...atual, endereco }))
+                  }
+                />
+                <Campo
+                  id="bairro-local"
+                  label="Bairro"
+                  maxLength={100}
+                  required={false}
+                  value={formularioLocal.bairro}
+                  onChange={(bairro) =>
+                    setFormularioLocal((atual) => ({ ...atual, bairro }))
+                  }
+                />
+                <Campo
+                  id="cidade-local"
+                  label="Cidade"
+                  maxLength={100}
+                  value={formularioLocal.cidade}
+                  onChange={(cidade) =>
+                    setFormularioLocal((atual) => ({ ...atual, cidade }))
+                  }
+                />
+                <Campo
+                  id="uf-local"
+                  label="UF"
+                  maxLength={2}
+                  value={formularioLocal.uf}
+                  onChange={(uf) =>
+                    setFormularioLocal((atual) => ({ ...atual, uf }))
+                  }
+                />
+                <Campo
+                  id="zona-local"
+                  label="Zona eleitoral"
+                  type="number"
+                  min={1}
+                  value={formularioLocal.zona_eleitoral}
+                  onChange={(zona_eleitoral) =>
+                    setFormularioLocal((atual) => ({
+                      ...atual,
+                      zona_eleitoral,
+                    }))
+                  }
+                />
+              </div>
+              <div className={styles.formActions}>
+                <button
+                  className={styles.secondaryButton}
+                  type="button"
+                  disabled={salvando}
+                  onClick={fecharFormularioLocal}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className={styles.primaryButton}
+                  type="submit"
+                  disabled={salvando}
+                >
+                  {salvando ? "Salvando..." : "Salvar local"}
+                </button>
+              </div>
+            </form>
+          )}
+          <label className={styles.searchField} htmlFor="buscar-locais">
+            <span>Buscar locais</span>
+            <input
+              id="buscar-locais"
+              type="search"
+              value={busca}
+              onChange={(event) => setBusca(event.currentTarget.value)}
+              placeholder="Nome, endereço, município ou zona"
+            />
+          </label>
+          {erro && <p className={styles.error} role="alert">{erro}</p>}
+          {aviso && <p className={styles.success} role="status">{aviso}</p>}
+          {carregando ? (
+            <p className={styles.emptyState} role="status">Carregando locais...</p>
+          ) : locaisFiltrados.length === 0 ? (
+            <p className={styles.emptyState}>
+              {locais.length === 0
+                ? "Nenhum local de votação cadastrado."
+                : "Nenhum local encontrado para essa busca."}
+            </p>
+          ) : (
+            <DataTable
+              title="Locais de votação"
+              columns={colunasLocais}
+              rows={locaisFiltrados}
+              getRowKey={(local) => local.id}
+              density="medium"
+              overflow="truncate"
+            />
+          )}
+        </>
+      )}
     </div>
-  );
-}
-
-function VolunteerModal({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: () => void }) {
-  return (
-    <BrModal className={styles.volunteerModal} show={open} size="medium" scrollable autoClose alignFooter="end" onBrModalClose={onClose}>
-      <div slot="header" className={styles.modalHeader}>
-        <h2>Encontrar voluntário para Presidente</h2>
-        <p>Seção 184 · EEB João XXIII</p>
-      </div>
-      <div className={styles.modalContent}>
-        <p>Selecione uma pessoa apta e disponível. Os critérios abaixo apenas ajudam a organizar a busca; a decisão continua sendo do servidor.</p>
-        <div className={styles.modalSearchRow}><BrInput className={styles.modalSearch} type="search" density="small" highlight placeholder="Buscar por nome, CPF ou título..." ariaLabel="Buscar voluntário"><BrButton slot="action" emphasis="tertiary" shape="circle" type="button" aria-label="Executar busca"><BrIcon iconName="fa6-solid:magnifying-glass" source="auto" width="16" height="16" aria-hidden="true" /></BrButton></BrInput><BrButton emphasis="primary" density="small" type="button">Filtros</BrButton></div>
-        <h3>8 voluntários compatíveis</h3>
-        <p>Prioridade operacional: mesmo local de votação e experiência anterior na função.</p>
-        <article className={styles.volunteerCard}>
-          <div className={styles.volunteerHeading}><strong>Ana Silva</strong><span>Alta compatibilidade</span></div>
-          <p>EEB João XXIII · Presidente em 2024 · Disponível</p>
-          <div className={styles.tags}><span>Vota neste local</span><span>Experiência como presidente</span></div>
-          <BrButton emphasis="primary" density="small" type="button" onClick={onSelect}>Pré-selecionar</BrButton>
-        </article>
-      </div>
-      <div slot="footer"><BrButton emphasis="secondary" density="small" type="button" onClick={onClose}>Fechar</BrButton></div>
-    </BrModal>
-  );
-}
-
-function ConfirmModal({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: () => void }) {
-  return (
-    <BrModal className={styles.confirmModal} show={open} size="medium" autoClose alignFooter="end" onBrModalClose={onClose}>
-      <div slot="header" className={styles.modalHeader}><h2>Confirmar pré-seleção</h2><p>Revise a vaga antes de confirmar.</p></div>
-      <div className={styles.modalContent}>
-        <section className={styles.selectionSummary}><div><strong>Ana Carolina da Silva</strong><span>Interesse ativo</span></div><b>Presidente · Seção 184</b><p>EEB João XXIII</p><p>Compatibilidade: vota neste local e já atuou como presidente.</p></section>
-        <p>Essa ação reserva a voluntária provisoriamente para a vaga. A pré-seleção não representa convocação e nenhuma comunicação será enviada neste momento.</p>
-      </div>
-      <div slot="footer" className={styles.modalFooter}><BrButton emphasis="secondary" density="small" type="button" onClick={onClose}>Cancelar</BrButton><BrButton emphasis="primary" density="small" type="button" onClick={onConfirm}>Confirmar pré-seleção</BrButton></div>
-    </BrModal>
-  );
-}
-
-function SuccessModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return (
-    <BrModal className={styles.successModal} show={open} size="medium" autoClose alignFooter="end" onBrModalClose={onClose}>
-      <div slot="header" className={styles.modalHeader}><h2>Pré-seleção concluída</h2></div>
-      <div className={styles.successContent}><span className={styles.successIcon}><BrIcon iconName="fa6-solid:check" source="auto" width="28" height="28" aria-hidden="true" /></span><h3>Ana Silva foi pré-selecionada</h3><p>Presidente · Seção 184 · EEB João XXIII</p><div className={styles.successInfo}>A vaga foi reservada provisoriamente. Nenhuma convocação ou comunicação foi enviada.</div></div>
-      <div slot="footer" className={styles.modalFooter}><BrButton emphasis="secondary" density="small" type="button" onClick={onClose}>Fechar</BrButton><BrButton emphasis="primary" density="small" type="button" onClick={onClose}>Ver pré-seleção</BrButton></div>
-    </BrModal>
   );
 }
