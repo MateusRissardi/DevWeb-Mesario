@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { BrButton } from "@govbr-ds/webcomponents-react";
 
 import { apiFetch, lerErro } from "@/lib/api/client";
 
@@ -540,13 +541,13 @@ export default function LocationsSectionsFlow() {
             title="Locais e seções"
             description="Consulte e mantenha os locais de votação e suas seções eleitorais."
             action={
-              <button
-                className={styles.primaryButton}
+              <BrButton
+                emphasis="primary"
                 type="button"
                 onClick={abrirNovoLocal}
               >
-                Novo local
-              </button>
+                + Novo local
+              </BrButton>
             }
           />
           <section className={styles.summary} aria-label="Resumo de locais e seções">

@@ -4,6 +4,7 @@ import { autorizar } from "@/lib/server/auth/guard";
 import {
   atualizarSecao,
   buscarSecaoPorId,
+  ehSecaoReferenciadaPorAlocacao,
   excluirSecao,
 } from "@/lib/server/db/locais-secoes";
 import {
@@ -104,6 +105,13 @@ export async function DELETE(request: Request, contexto: Contexto) {
       ? new NextResponse(null, { status: 204 })
       : respostaErro(404, "Seção não encontrada");
   } catch (erro) {
+    if (ehSecaoReferenciadaPorAlocacao(erro)) {
+      return respostaErro(
+        409,
+        "Não é possível excluir esta seção porque ela possui alocações vinculadas. Remova ou transfira as alocações antes de tentar novamente.",
+      );
+    }
+
     registrarErro("excluir-secao", erro);
     return respostaErro(500, "Erro interno");
   }

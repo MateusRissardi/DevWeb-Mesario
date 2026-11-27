@@ -35,6 +35,17 @@ type CamposLocal = Partial<
   >
 >;
 
+export function ehSecaoReferenciadaPorAlocacao(erro: unknown): boolean {
+  if (typeof erro !== "object" || erro === null) return false;
+
+  return (
+    "code" in erro &&
+    erro.code === "23503" &&
+    "constraint" in erro &&
+    erro.constraint === "alocacoes_secao_id_fkey"
+  );
+}
+
 interface LocalComSecaoLinha {
   id: number;
   nome: string;

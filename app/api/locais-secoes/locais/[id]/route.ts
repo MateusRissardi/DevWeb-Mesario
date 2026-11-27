@@ -4,6 +4,7 @@ import { autorizar } from "@/lib/server/auth/guard";
 import {
   atualizarLocal,
   buscarLocalPorId,
+  ehSecaoReferenciadaPorAlocacao,
   excluirLocal,
 } from "@/lib/server/db/locais-secoes";
 import { lerJson, registrarErro, respostaErro } from "@/lib/server/http";
@@ -74,6 +75,13 @@ export async function DELETE(request: Request, contexto: Contexto) {
       ? new NextResponse(null, { status: 204 })
       : respostaErro(404, "Local de votação não encontrado");
   } catch (erro) {
+    if (ehSecaoReferenciadaPorAlocacao(erro)) {
+      return respostaErro(
+        409,
+        "Não é possível excluir este local porque uma ou mais seções possuem alocações vinculadas. Remova ou transfira as alocações antes de tentar novamente.",
+      );
+    }
+
     registrarErro("excluir-local-votacao", erro);
     return respostaErro(500, "Erro interno");
   }
