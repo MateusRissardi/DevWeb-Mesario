@@ -85,7 +85,7 @@ export default function DataTable<T>({
                             rowDivider: true,
                             density,
                             overflow,
-                            tooltipMode: "enabled",
+                            tooltipMode: "disabled",
                         });
                     }}
                     className={styles.table}
@@ -93,7 +93,7 @@ export default function DataTable<T>({
                     dividerStyle="solid"
                     rowDivider
                     overflow={overflow}
-                    tooltipMode="enabled"
+                    tooltipMode="disabled"
                 >
                     <BrTableHeader slot="header">
                         {columns.map((column) => (

@@ -1,234 +1,59 @@
 "use client";
 
-import {
-    BrButton,
-    BrIcon,
-    BrPagination,
-} from "@govbr-ds/webcomponents-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-import DataTable, {
-    type DataTableColumn,
-} from "./DataTable";
+import { BrButton } from "@govbr-ds/webcomponents-react";
+
+import { formatarQuando, type PainelCartorio } from "@/lib/api/cartorio";
+
+import CadastrarVoluntarioModal from "./CadastrarVoluntarioModal";
+import DataTable, { type DataTableColumn } from "./DataTable";
+import { EstadoLista } from "./Controles";
 
 import styles from "./RecentManifestationsTable.module.css";
 
-interface Manifestation {
-    id: number;
-    name: string;
-    location: string;
-    origin: string;
-    receivedAt: string;
-}
+type Recente = PainelCartorio["recentes"][number];
 
-const manifestations: readonly Manifestation[] = [
-    {
-        id: 1,
-        name: "Jéssica José",
-        location: "EEB",
-        origin: "e-título",
-        receivedAt: "Hoje, 16:49",
-    },
-    {
-        id: 2,
-        name: "Ruan Nogueira",
-        location: "E.M.C.S.",
-        origin: "e-título",
-        receivedAt: "Hoje, 16:45",
-    },
-    {
-        id: 3,
-        name: "Benedito Bezerra",
-        location: "EEB",
-        origin: "Portal",
-        receivedAt: "Hoje, 16:15",
-    },
-    {
-        id: 4,
-        name: "Luciano Morais",
-        location: "EEB",
-        origin: "Portal",
-        receivedAt: "Hoje, 16:12",
-    },
-    {
-        id: 5,
-        name: "Ana da Rocha",
-        location: "E.M.C.S.",
-        origin: "e-título",
-        receivedAt: "Hoje, 15:54",
-    },
-    {
-        id: 6,
-        name: "Lúcia Braga",
-        location: "EEB",
-        origin: "e-título",
-        receivedAt: "Hoje, 10:34",
-    },
-    {
-        id: 7,
-        name: "Guilherme Coelho",
-        location: "EEB",
-        origin: "Presencial",
-        receivedAt: "Hoje, 09:42",
-    },
-    {
-        id: 8,
-        name: "Márcia Medeiros",
-        location: "EEB",
-        origin: "Portal",
-        receivedAt: "Ontem",
-    },
-    {
-        id: 9,
-        name: "João Costa",
-        location: "E.M.C.S.",
-        origin: "Presencial",
-        receivedAt: "2 dias",
-    },
-    {
-        id: 10,
-        name: "Maria Pereira",
-        location: "EEB",
-        origin: "e-título",
-        receivedAt: "3 dias",
-    },
+const colunas: readonly DataTableColumn<Recente>[] = [
+  { key: "name", label: "Nome", columnWidth: "5fr", render: (r) => r.nome },
+  { key: "location", label: "Local de votação", columnWidth: "3fr", render: (r) => r.local_votacao },
+  { key: "origin", label: "Origem", columnWidth: "2fr", render: (r) => (r.origem === "presencial" ? "Presencial" : "Portal") },
+  { key: "receivedAt", label: "Recebida", columnWidth: "2fr", render: (r) => formatarQuando(r.criado_em) },
 ];
 
-const columns: readonly DataTableColumn<Manifestation>[] = [
-    {
-        key: "name",
-        label: "Nome",
-        columnWidth: "5fr",
-        render: (manifestation) => manifestation.name,
-    },
-    {
-        key: "location",
-        label: "Local",
-        columnWidth: "1.25fr",
-        render: (manifestation) => manifestation.location,
-    },
-    {
-        key: "origin",
-        label: "Origem",
-        columnWidth: "1.5fr",
-        render: (manifestation) => manifestation.origin,
-    },
-    {
-        key: "receivedAt",
-        label: "Recebida",
-        columnWidth: "2fr",
-        header: (
-            <span className={styles.sortHeader}>
-                Recebida
+export default function RecentManifestationsTable({
+  rows,
+  onMudou,
+}: Readonly<{ rows: readonly Recente[]; onMudou: () => void }>) {
+  const router = useRouter();
+  const [cadastrando, setCadastrando] = useState(false);
 
-                <BrIcon
-                    iconName="fa6-solid:sort"
-                    source="auto"
-                    width="16"
-                    height="16"
-                    aria-hidden="true"
-                />
-            </span>
-        ),
-        render: (manifestation) => manifestation.receivedAt,
-    },
-    {
-        key: "action",
-        label: "Ação",
-        columnWidth: "96px",
-        horizontalAlignment: "center",
-        header: (
-            <span className={styles.actionHeader}>
-                Ação
-            </span>
-        ),
-        render: (manifestation) => (
-            <div className={styles.actionCell}>
-                <BrButton
-                    className={styles.rowAction}
-                    emphasis="tertiary"
-                    shape="circle"
-                    type="button"
-                    aria-label={`Visualizar manifestação de ${manifestation.name}`}
-                >
-                    <BrIcon
-                        className={styles.actionIcon}
-                        iconName="fa6-solid:eye"
-                        source="auto"
-                        width="16"
-                        height="16"
-                        aria-hidden="true"
-                    />
-                </BrButton>
-            </div>
-        ),
-    },
-];
-
-export default function RecentManifestationsTable() {
-    return (
-        <DataTable
-            title="Novas manifestações"
-            columns={columns}
-            rows={manifestations}
-            getRowKey={(manifestation) => manifestation.id}
-            density="medium"
-            headerActions={
-                <>
-                    <BrButton
-                        className={styles.headerIconButton}
-                        emphasis="tertiary"
-                        density="small"
-                        shape="circle"
-                        type="button"
-                        aria-label="Pesquisar manifestações"
-                    >
-                        <BrIcon
-                            iconName="fa6-solid:magnifying-glass"
-                            source="auto"
-                            width="16"
-                            height="16"
-                            aria-hidden="true"
-                        />
-                    </BrButton>
-
-                    <BrButton
-                        className={styles.newButton}
-                        emphasis="primary"
-                        density="small"
-                        type="button"
-                    >
-                        + Novo Mesário
-                    </BrButton>
-
-                    <BrButton
-                        className={styles.headerIconButton}
-                        emphasis="tertiary"
-                        density="small"
-                        shape="circle"
-                        type="button"
-                        aria-label="Mais opções"
-                    >
-                        <BrIcon
-                            iconName="fa6-solid:ellipsis-vertical"
-                            source="auto"
-                            width="16"
-                            height="16"
-                            aria-hidden="true"
-                        />
-                    </BrButton>
-                </>
-            }
-            footer={
-                <BrPagination
-                    className={styles.pagination}
-                    variant="contextual"
-                    current={1}
-                    total={12}
-                    totalItems={120}
-                    perPage={10}
-                    ariaLabel="Paginação das novas manifestações"
-                />
-            }
-        />
-    );
+  return (
+    <>
+    <DataTable
+      title="Novas manifestações"
+      columns={colunas}
+      rows={rows}
+      getRowKey={(r) => r.id}
+      density="medium"
+      headerActions={
+        <>
+          <BrButton className={styles.newButton} emphasis="secondary" density="small" type="button" onClick={() => router.push("/cartorio/manifestacoes")}>
+            Ver todas
+          </BrButton>
+          <BrButton className={styles.newButton} emphasis="primary" density="small" type="button" onClick={() => setCadastrando(true)}>
+            + Novo Mesário
+          </BrButton>
+        </>
+      }
+      footer={
+        <EstadoLista carregando={false} vazio={rows.length === 0} textoVazio="Nenhuma manifestação recebida ainda." />
+      }
+    />
+    {cadastrando && (
+      <CadastrarVoluntarioModal onConcluido={onMudou} onFechar={() => setCadastrando(false)} />
+    )}
+    </>
+  );
 }

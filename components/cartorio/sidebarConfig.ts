@@ -3,7 +3,6 @@ export interface SidebarNavItem {
   label: string;
   href: string;
   iconSrc: string;
-  badge?: number;
 }
 
 export const sidebarNavItems: SidebarNavItem[] = [
@@ -18,7 +17,6 @@ export const sidebarNavItems: SidebarNavItem[] = [
     label: "Pendências",
     href: "/cartorio/pendencias",
     iconSrc: "/assets/icons/sidebar/pendencias.svg",
-    badge: 4,
   },
   {
     id: "manifestacoes",

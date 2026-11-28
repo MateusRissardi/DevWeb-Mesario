@@ -22,6 +22,10 @@ export enum StatusBadgeType {
 	ConvocacaoFalha = 17,
 	SemAlerta = 18,
 	ComAlerta = 19,
+	ConvocacaoConvocada = 20,
+	ConvocacaoRecusada = 21,
+	ConvocacaoCancelada = 22,
+	VoluntarioIndisponivel = 23,
 }
 
 type StatusBadgeDefinition = {
@@ -49,6 +53,10 @@ const statusBadgeDefinitions: Record<StatusBadgeType, StatusBadgeDefinition> = {
 	[StatusBadgeType.ConvocacaoFalha]: { label: "Falha", color: "red",},
 	[StatusBadgeType.SemAlerta]: { label: "Sem alerta", color: "gray" },
 	[StatusBadgeType.ComAlerta]: { label: "Bloqueio", color: "red" },
+	[StatusBadgeType.ConvocacaoConvocada]: { label: "Convocado", color: "blue" },
+	[StatusBadgeType.ConvocacaoRecusada]: { label: "Recusada", color: "red" },
+	[StatusBadgeType.ConvocacaoCancelada]: { label: "Cancelada", color: "gray" },
+	[StatusBadgeType.VoluntarioIndisponivel]: { label: "Interesse retirado", color: "gray" },
 };
 
 export type StatusBadgeProps = Omit<HTMLAttributes<HTMLSpanElement>, "children"> & {

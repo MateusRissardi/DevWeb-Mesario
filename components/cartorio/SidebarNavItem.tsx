@@ -6,6 +6,8 @@ import type {
   SidebarNavItem as SidebarNavItemData,
 } from "./sidebarConfig";
 
+import SeloPendencias from "./SeloPendencias";
+
 import styles from "./SidebarModule.module.css";
 
 interface SidebarNavItemProps {
@@ -45,14 +47,7 @@ export default function SidebarNavItem({
           {item.label}
         </span>
 
-        {item.badge !== undefined && (
-          <span
-            className={styles.badge}
-            aria-label={`${item.badge} pendências`}
-          >
-            {item.badge}
-          </span>
-        )}
+        {item.id === "pendencias" && <SeloPendencias />}
 
         <span
           className={styles.chevron}

@@ -1,137 +1,149 @@
 "use client";
 
-import {
-    BrButton,
-    BrIcon,
-    BrInput,
-    BrPagination,
-} from "@govbr-ds/webcomponents-react";
+import { useState } from "react";
 
+import { BrButton, BrIcon } from "@govbr-ds/webcomponents-react";
+
+import {
+  formatarQuando,
+  useLista,
+  type ResumoVoluntarios,
+  type VoluntarioLinha,
+} from "@/lib/api/cartorio";
+
+import { BarraFiltros, ChipsFiltros, EstadoLista, RodapeLista, type DefinicaoFiltro } from "./Controles";
 import DataTable, { type DataTableColumn } from "./DataTable";
-import StatusBadge, { StatusBadgeType } from "./StatusBadge";
+import DetalheVoluntarioModal from "./DetalheVoluntarioModal";
+import ManifestationsSummary from "./ManifestationsSummary";
+import NovoVoluntarioBotao from "./NovoVoluntarioBotao";
+import PageHeader from "./PageHeader";
+import { SELO_SITUACAO } from "./rotulos";
+import StatusBadge from "./StatusBadge";
 
 import styles from "./ManifestationsTable.module.css";
 
-interface Manifestation {
-    id: number;
-    person: string;
-    pollingPlace: string;
-    source: string;
-    receivedAt: string;
-    situation: StatusBadgeType;
-    contact: string;
-}
+const SITUACOES = [
+  { valor: "nova", rotulo: "Nova" },
+  { valor: "apta", rotulo: "Apta" },
+  { valor: "em_analise", rotulo: "Em análise" },
+] as const;
 
-const manifestations: readonly Manifestation[] = [
-    {
-        id: 1,
-        person: "Ana Silva",
-        pollingPlace: "EEB João XXIII",
-        source: "Portal",
-        receivedAt: "Hoje, 16:49",
-        situation: StatusBadgeType.ManifestacaoNova,
-        contact: "Completo",
-    },
-    {
-        id: 2,
-        person: "João Costa",
-        pollingPlace: "E.M.C.S.",
-        source: "Presencial",
-        receivedAt: "Hoje, 09:42",
-        situation: StatusBadgeType.ManifestacaoApta,
-        contact: "Sem e-mail",
-    },
-    {
-        id: 3,
-        person: "Maria Pereira",
-        pollingPlace: "EEB Central",
-        source: "e-Título",
-        receivedAt: "Ontem",
-        situation: StatusBadgeType.ManifestacaoEmAnalise,
-        contact: "Completo",
-    },
-];
+const ORIGENS = [
+  { valor: "portal", rotulo: "Portal" },
+  { valor: "presencial", rotulo: "Presencial" },
+] as const;
 
-function FilterTag({ label }: { label: string }) {
-    return (
-        <span className={styles.filterTag}>
-            {label}
-            <BrButton
-                className={styles.removeFilterButton}
-                emphasis="tertiary"
-                shape="circle"
-                type="button"
-                aria-label={`Remover filtro ${label}`}
-            >
-                <BrIcon iconName="fa6-solid:xmark" source="auto" width="12" height="12" aria-hidden="true" />
-            </BrButton>
-        </span>
-    );
-}
-
-const columns: readonly DataTableColumn<Manifestation>[] = [
-    { key: "person", label: "Pessoa", columnWidth: "1.3fr", render: (row) => row.person },
-    { key: "pollingPlace", label: "Local de votação", columnWidth: "1.25fr", render: (row) => row.pollingPlace },
-    { key: "source", label: "Origem", columnWidth: "0.9fr", render: (row) => row.source },
-    { key: "receivedAt", label: "Recebida em", columnWidth: "1fr", render: (row) => row.receivedAt },
-    {
-        key: "situation",
-        label: "Situação",
-        columnWidth: "1fr",
-        render: (row) => <StatusBadge className={styles.badge} status={row.situation} />,
-    },
-    { key: "contact", label: "Contato", columnWidth: "1fr", render: (row) => row.contact },
-    {
-        key: "action",
-        label: "Ação",
-        columnWidth: "96px",
-        horizontalAlignment: "center",
-        render: (row) => (
-            <BrButton
-                className={styles.actionButton}
-                emphasis="tertiary"
-                shape="circle"
-                type="button"
-                aria-label={`Visualizar manifestação de ${row.person}`}
-            >
-                <BrIcon iconName="fa6-solid:eye" source="auto" width="16" height="16" aria-hidden="true" />
-            </BrButton>
-        ),
-    },
-];
+const ROTULO_ORIGEM: Record<string, string> = { portal: "Portal", presencial: "Presencial" };
 
 export default function ManifestacoesTable() {
-    return (
-        <DataTable
-            title="Manifestações da unidade"
-            columns={columns}
-            rows={manifestations}
-            getRowKey={(row) => row.id}
-            density="medium"
-            overflow="truncate"
-            headerActions={
-                <>
-                    <BrInput className={styles.search} type="search" density="small" highlight placeholder="Buscar por nome, CPF, título ou seção..." ariaLabel="Buscar manifestações">
-                        <BrButton className={styles.searchButton} slot="action" emphasis="tertiary" shape="circle" type="button" aria-label="Executar busca">
-                            <BrIcon iconName="fa6-solid:magnifying-glass" source="auto" width="16" height="16" aria-hidden="true" />
-                        </BrButton>
-                    </BrInput>
-                    <BrButton className={styles.filterButton} emphasis="primary" density="small" type="button" aria-label="Abrir filtros, três filtros ativos">
-                        Filtros <span className={styles.filterCount}>3</span>
-                    </BrButton>
-                    <BrButton className={styles.moreButton} emphasis="tertiary" density="small" shape="circle" type="button" aria-label="Mais opções">
-                        <BrIcon iconName="fa6-solid:ellipsis-vertical" source="auto" width="16" height="16" aria-hidden="true" />
-                    </BrButton>
-                </>
-            }
-            headerContent={
-                <>
-                    <FilterTag label="Origem: Presencial" />
-                    <FilterTag label="Situação: Nova" />
-                    <FilterTag label="Local: EEB João XXIII" />
-                </>
-            }
-            footer={<BrPagination variant="contextual" current={1} total={1} totalItems={3} perPage={10} ariaLabel="Paginação das manifestações da unidade" />}
-        />
-    );
+  const lista = useLista<VoluntarioLinha, ResumoVoluntarios>("/api/cartorio/voluntarios", {
+    situacao: "",
+    origem: "",
+  });
+  const [aberto, setAberto] = useState<number | null>(null);
+  const { dados, erro, carregando, recarregar } = lista;
+
+  const filtros: DefinicaoFiltro[] = [
+    { chave: "situacao", rotulo: "Situação", valor: lista.filtros.situacao, opcoes: SITUACOES },
+    { chave: "origem", rotulo: "Origem", valor: lista.filtros.origem, opcoes: ORIGENS },
+  ];
+
+  const colunas: readonly DataTableColumn<VoluntarioLinha>[] = [
+    { key: "person", label: "Pessoa", columnWidth: "1.3fr", render: (r) => r.nome },
+    { key: "place", label: "Local de votação", columnWidth: "1.25fr", render: (r) => r.local_votacao },
+    { key: "origin", label: "Origem", columnWidth: "0.8fr", render: (r) => ROTULO_ORIGEM[r.origem] },
+    { key: "receivedAt", label: "Recebida em", columnWidth: "1fr", render: (r) => formatarQuando(r.criado_em) },
+    {
+      key: "situation",
+      label: "Situação",
+      columnWidth: "1fr",
+      render: (r) => <StatusBadge className={styles.badge} status={SELO_SITUACAO[r.situacao]} />,
+    },
+    { key: "contact", label: "Contato", columnWidth: "1fr", render: (r) => r.contato },
+    {
+      key: "action",
+      label: "Ação",
+      columnWidth: "80px",
+      horizontalAlignment: "center",
+      render: (r) => (
+        <BrButton
+          className={styles.actionButton}
+          emphasis="tertiary"
+          shape="circle"
+          type="button"
+          aria-label={`Visualizar manifestação de ${r.nome}`}
+          onClick={() => setAberto(r.id)}
+        >
+          <BrIcon iconName="fa6-solid:eye" source="auto" width="16" height="16" aria-hidden="true" />
+        </BrButton>
+      ),
+    },
+  ];
+
+  const resumo = dados?.resumo;
+
+  return (
+    <>
+      <PageHeader
+        title="Manifestações"
+        description="Acompanhe e analise as pessoas que demonstraram interesse em atuar como mesárias ou mesários voluntários."
+        action={<NovoVoluntarioBotao onConcluido={recarregar} />}
+      />
+
+      <ManifestationsSummary
+        ariaLabel="Resumo das manifestações"
+        items={[
+          { label: "Todas", value: resumo?.todas ?? 0 },
+          { label: "Novas", value: resumo?.novas ?? 0 },
+          { label: "Em análise", value: resumo?.em_analise ?? 0 },
+          { label: "Aptas", value: resumo?.aptas ?? 0 },
+        ]}
+      />
+
+      <DataTable
+        title="Manifestações da unidade"
+        columns={colunas}
+        rows={dados?.itens ?? []}
+        getRowKey={(r) => r.id}
+        density="medium"
+        overflow="truncate"
+        headerActions={
+          <BarraFiltros
+            placeholder="Buscar por nome, CPF, título ou seção..."
+            busca={lista.q}
+            onBuscar={lista.setQ}
+            filtros={filtros}
+            onFiltro={lista.setFiltro}
+            onLimpar={lista.limpar}
+          />
+        }
+        headerContent={
+          <ChipsFiltros filtros={filtros} busca={lista.q} onFiltro={lista.setFiltro} onBuscar={lista.setQ} />
+        }
+        footer={
+          <>
+            <EstadoLista
+              carregando={carregando}
+              erro={erro}
+              vazio={dados?.itens.length === 0}
+              textoVazio="Nenhuma manifestação encontrada."
+              onTentarDeNovo={recarregar}
+            />
+            <RodapeLista
+              pagina={lista.pagina}
+              limite={lista.limite}
+              total={dados?.total ?? 0}
+              onPagina={lista.setPagina}
+              onLimite={lista.setLimite}
+              unidade="manifestações"
+            />
+          </>
+        }
+      />
+
+      {aberto !== null && (
+        <DetalheVoluntarioModal id={aberto} onMudou={recarregar} onFechar={() => setAberto(null)} />
+      )}
+    </>
+  );
 }

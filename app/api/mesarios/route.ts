@@ -89,6 +89,9 @@ export async function POST(request: Request) {
     const mesario = await inserirMesario(
       entrada.data,
       contaDeMesario?.id ?? null,
+      contaDeMesario
+        ? { origem: "portal", autorId: contaDeMesario.id }
+        : { origem: "presencial", autorId: acesso.usuario.id },
     );
     if (!mesario) {
       return respostaErro(409, "Sua conta já está ligada a um cadastro");

@@ -72,7 +72,20 @@ export async function PUT(request: Request, contexto: Contexto) {
       });
     }
 
-    const mesario = await atualizarMesario(id.data, entrada.data);
+    const equipe = ehEquipe(acesso.usuario);
+    if (
+      !equipe &&
+      (entrada.data.data_nascimento !== undefined ||
+        entrada.data.municipio !== undefined)
+    ) {
+      return respostaErro(403, "Só o cartório altera data de nascimento e município");
+    }
+
+    const mesario = await atualizarMesario(
+      id.data,
+      entrada.data,
+      equipe ? acesso.usuario.id : null,
+    );
     return mesario
       ? NextResponse.json({ data: mesario })
       : respostaErro(404, "Mesário não encontrado");

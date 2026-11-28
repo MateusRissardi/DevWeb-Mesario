@@ -1,74 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+
+import { BrButton, BrIcon } from "@govbr-ds/webcomponents-react";
 
 import {
-  BrButton,
-  BrIcon,
-  BrInput,
-  BrModal,
-  BrPagination,
-} from "@govbr-ds/webcomponents-react";
+  comParametros,
+  enviar,
+  ROTULO_FUNCAO,
+  useApi,
+  type LocalLinha,
+  type Pagina,
+  type ResumoLocais,
+  type ResumoSecoes,
+  type SecaoDetalhe,
+  type SecaoLinha,
+} from "@/lib/api/cartorio";
 
+import CandidatosModal from "./CandidatosModal";
+import ConfirmarModal from "./ConfirmarModal";
+import { CampoBusca, EstadoLista, FiltroSelect, Paginador } from "./Controles";
 import DataTable, { type DataTableColumn } from "./DataTable";
+import DetalheVoluntarioModal from "./DetalheVoluntarioModal";
+import Historico from "./Historico";
+import LocalFormModal from "./LocalFormModal";
 import PageHeader from "./PageHeader";
+import { SELO_LOCAL, SELO_SELECAO } from "./rotulos";
+import SecaoFormModal from "./SecaoFormModal";
 import StatusBadge, { StatusBadgeType } from "./StatusBadge";
+
 import styles from "./LocationsSectionsFlow.module.css";
 
-type View = "locations" | "polling-place" | "section";
+const LIMITE = 10;
 
-interface PollingPlace {
-  id: number;
-  name: string;
-  city: string;
-  sections: number;
-  complete: number;
-  vacancies: number;
-  situation: StatusBadgeType;
-}
+type Vista =
+  | { tipo: "locais" }
+  | { tipo: "local"; localId: number }
+  | { tipo: "secao"; localId: number; secaoId: number };
 
-interface SectionRow {
-  id: number;
-  section: string;
-  president: string;
-  firstWorker: string;
-  secondWorker: string;
-  secretary: string;
-  vacancies: number;
-}
+type Composicao = SecaoDetalhe["composicao"][number];
 
-interface CompositionRow {
-  id: number;
-  role: string;
-  person: string;
-  situation: StatusBadgeType;
-  situationLabel: string;
-  action: string;
-}
-
-const pollingPlaces: readonly PollingPlace[] = [
-  { id: 1, name: "EEB João XXIII", city: "Ibirama", sections: 12, complete: 11, vacancies: 1, situation: StatusBadgeType.LocalAtencao },
-  { id: 2, name: "EEB Central", city: "Ibirama", sections: 8, complete: 8, vacancies: 0, situation: StatusBadgeType.LocalCompleto },
-  { id: 3, name: "E.M.C.S.", city: "José Boiteux", sections: 6, complete: 4, vacancies: 3, situation: StatusBadgeType.LocalCritico },
-];
-
-const sections: readonly SectionRow[] = [
-  { id: 181, section: "181", president: "João Silva", firstWorker: "Ana Costa", secondWorker: "Pedro Lima", secretary: "Maria Souza", vacancies: 0 },
-  { id: 184, section: "184", president: "Vaga", firstWorker: "Carlos Silva", secondWorker: "Júlia Reis", secretary: "Lucas Costa", vacancies: 1 },
-  { id: 183, section: "183", president: "Ana Souza", firstWorker: "Paulo Lima", secondWorker: "Marina Reis", secretary: "Luiz Costa", vacancies: 0 },
-];
-
-const composition: readonly CompositionRow[] = [
-  { id: 1, role: "Presidente", person: "—", situation: StatusBadgeType.PrioridadeCritica, situationLabel: "Vaga não preenchida", action: "Encontrar voluntário" },
-  { id: 2, role: "1º mesário", person: "Carlos Silva", situation: StatusBadgeType.VoluntarioPreSelecionado, situationLabel: "Pré-selecionado", action: "Ver perfil" },
-  { id: 3, role: "2º mesário", person: "Júlia Reis", situation: StatusBadgeType.VoluntarioSelecionada, situationLabel: "Selecionada", action: "Ver perfil" },
-  { id: 4, role: "Secretário", person: "Lucas Costa", situation: StatusBadgeType.VoluntarioSelecionada, situationLabel: "Selecionada", action: "Ver perfil" },
-];
-
-function Summary({ items }: { items: readonly { label: string; value: number }[] }) {
+function Resumo({ itens, rotulo }: Readonly<{ itens: readonly { label: string; value: number }[]; rotulo: string }>) {
   return (
-    <section className={styles.summary} aria-label="Resumo de locais e seções">
-      {items.map((item) => (
+    <section className={styles.summary} aria-label={rotulo}>
+      {itens.map((item) => (
         <div className={styles.summaryItem} key={item.label}>
           <strong>{item.label}</strong>
           <span>{item.value}</span>
@@ -78,274 +53,499 @@ function Summary({ items }: { items: readonly { label: string; value: number }[]
   );
 }
 
-function FilterTag({ label }: { label: string }) {
-  return (
-    <span className={styles.filterTag}>
-      {label}
-      <BrButton className={styles.removeFilterButton} emphasis="tertiary" shape="circle" type="button" aria-label={`Remover filtro ${label}`}>
-        <BrIcon iconName="fa6-solid:xmark" source="auto" width="12" height="12" aria-hidden="true" />
-      </BrButton>
-    </span>
-  );
-}
-
-function SearchActions({ placeholder, activeFilters = 1 }: { placeholder: string; activeFilters?: number }) {
-  return (
-    <>
-      <BrInput className={styles.search} type="search" density="small" highlight placeholder={placeholder} ariaLabel={placeholder}>
-        <BrButton className={styles.searchButton} slot="action" emphasis="tertiary" shape="circle" type="button" aria-label="Executar busca">
-          <BrIcon iconName="fa6-solid:magnifying-glass" source="auto" width="16" height="16" aria-hidden="true" />
-        </BrButton>
-      </BrInput>
-      <BrButton className={styles.filterButton} emphasis="primary" density="small" type="button" aria-label={`Abrir filtros, ${activeFilters} filtros ativos`}>
-        Filtros
-        <span className={styles.filterCount}>{activeFilters}</span>
-      </BrButton>
-    </>
-  );
-}
+const Grupo = ({ children }: { children: ReactNode }) => (
+  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>{children}</div>
+);
 
 export default function LocationsSectionsFlow() {
-  const [view, setView] = useState<View>("locations");
-  const [findVolunteerOpen, setFindVolunteerOpen] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
+  const [vista, setVista] = useState<Vista>({ tipo: "locais" });
 
-  const locationColumns: readonly DataTableColumn<PollingPlace>[] = [
-    {
-      key: "name",
-      label: "Local de votação",
-      columnWidth: "1fr",
-      render: (row) => row.name,
-    },
-    {
-      key: "city",
-      label: "Município",
-      columnWidth: "0.8fr",
-      render: (row) => row.city,
-    },
-    {
-      key: "sections",
-      label: "Seções",
-      columnWidth: "90px",
-      render: (row) => row.sections,
-    },
-    {
-      key: "complete",
-      label: "Completas",
-      columnWidth: "100px",
-      render: (row) => row.complete,
-    },
-    {
-      key: "vacancies",
-      label: "Vagas",
-      columnWidth: "90px",
-      render: (row) => row.vacancies,
-    },
+  if (vista.tipo === "secao") {
+    return (
+      <VistaSecao
+        secaoId={vista.secaoId}
+        onVoltar={() => setVista({ tipo: "local", localId: vista.localId })}
+      />
+    );
+  }
+  if (vista.tipo === "local") {
+    return (
+      <VistaLocal
+        localId={vista.localId}
+        onVoltar={() => setVista({ tipo: "locais" })}
+        onAbrirSecao={(secaoId) => setVista({ tipo: "secao", localId: vista.localId, secaoId })}
+      />
+    );
+  }
+  return <VistaLocais onAbrir={(localId) => setVista({ tipo: "local", localId })} />;
+}
+
+/* ---------- lista de locais ---------- */
+
+function VistaLocais({ onAbrir }: Readonly<{ onAbrir: (id: number) => void }>) {
+  const [q, setQ] = useState("");
+  const [situacao, setSituacao] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const [novo, setNovo] = useState(false);
+
+  const { dados, erro, carregando, recarregar } = useApi<Pagina<LocalLinha, ResumoLocais>>(
+    comParametros("/api/cartorio/locais", { q, situacao, pagina, limite: LIMITE }),
+  );
+
+  const colunas: readonly DataTableColumn<LocalLinha>[] = [
+    { key: "name", label: "Local de votação", columnWidth: "1.2fr", render: (r) => r.nome },
+    { key: "city", label: "Município", columnWidth: "0.8fr", render: (r) => r.cidade },
+    { key: "zone", label: "Zona", columnWidth: "70px", render: (r) => r.zona_eleitoral },
+    { key: "sections", label: "Seções", columnWidth: "80px", render: (r) => r.secoes },
+    { key: "complete", label: "Completas", columnWidth: "100px", render: (r) => r.completas },
+    { key: "vacancies", label: "Vagas", columnWidth: "80px", render: (r) => r.vagas },
     {
       key: "situation",
       label: "Situação",
-      columnWidth: "150px",
-      render: (row) => (
+      columnWidth: "130px",
+      render: (r) => {
+        const selo = SELO_LOCAL[r.situacao];
+        return <StatusBadge className={styles.badge} status={selo.tipo} label={selo.rotulo} />;
+      },
+    },
+    {
+      key: "action",
+      label: "Ação",
+      columnWidth: "170px",
+      horizontalAlignment: "center",
+      render: (r) => (
+        <BrButton
+          className={styles.rowAction}
+          emphasis="tertiary"
+          density="small"
+          type="button"
+          aria-label={`Ver seções de ${r.nome}`}
+          onClick={() => onAbrir(r.id)}
+        >
+          Ver seções
+          <BrIcon iconName="fa6-solid:arrow-right" source="auto" width="12" height="12" aria-hidden="true" />
+        </BrButton>
+      ),
+    },
+  ];
+
+  const r = dados?.resumo;
+
+  return (
+    <div className={styles.page}>
+      <PageHeader
+        title="Locais e seções"
+        description="Cadastre os locais de votação e suas seções e acompanhe a composição das mesas."
+        action={
+          <BrButton emphasis="primary" type="button" onClick={() => setNovo(true)}>
+            + Novo local
+          </BrButton>
+        }
+      />
+      <Resumo
+        rotulo="Resumo de locais e seções"
+        itens={[
+          { label: "Locais de votação", value: r?.locais ?? 0 },
+          { label: "Seções", value: r?.secoes ?? 0 },
+          { label: "Seções completas", value: r?.completas ?? 0 },
+          { label: "Seções com vagas", value: r?.com_vagas ?? 0 },
+        ]}
+      />
+      <DataTable
+        title="Locais da unidade"
+        columns={colunas}
+        rows={dados?.itens ?? []}
+        getRowKey={(x) => x.id}
+        density="medium"
+        overflow="truncate"
+        headerActions={
+          <>
+            <CampoBusca
+              placeholder="Buscar por local, município ou zona..."
+              valor={q}
+              onBuscar={(t) => {
+                setQ(t);
+                setPagina(1);
+              }}
+            />
+            <FiltroSelect
+              rotulo="Situação"
+              valor={situacao}
+              opcoes={[
+                { valor: "critico", rotulo: "Crítico" },
+                { valor: "atencao", rotulo: "Atenção" },
+                { valor: "completo", rotulo: "Completo" },
+                { valor: "sem_secoes", rotulo: "Sem seções" },
+              ]}
+              onChange={(v) => {
+                setSituacao(v);
+                setPagina(1);
+              }}
+            />
+          </>
+        }
+        footer={
+          <>
+            <EstadoLista
+              carregando={carregando}
+              erro={erro}
+              vazio={dados?.itens.length === 0}
+              textoVazio="Nenhum local cadastrado. Use “+ Novo local” para começar."
+              onTentarDeNovo={recarregar}
+            />
+            <Paginador pagina={pagina} limite={LIMITE} total={dados?.total ?? 0} rotulo="Paginação dos locais da unidade" onPagina={setPagina} />
+          </>
+        }
+      />
+      {novo && (
+        <LocalFormModal
+          onFechar={() => setNovo(false)}
+          onSalvo={() => {
+            setNovo(false);
+            recarregar();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ---------- seções de um local ---------- */
+
+function VistaLocal({
+  localId,
+  onVoltar,
+  onAbrirSecao,
+}: Readonly<{ localId: number; onVoltar: () => void; onAbrirSecao: (id: number) => void }>) {
+  const [q, setQ] = useState("");
+  const [situacao, setSituacao] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const [novaSecao, setNovaSecao] = useState(false);
+  const [editar, setEditar] = useState(false);
+  const [excluir, setExcluir] = useState(false);
+  const [trabalhando, setTrabalhando] = useState(false);
+  const [erroExcluir, setErroExcluir] = useState("");
+
+  const local = useApi<{ data: LocalLinha }>(`/api/cartorio/locais/${localId}`);
+  const secoes = useApi<Pagina<SecaoLinha, ResumoSecoes>>(
+    comParametros(`/api/cartorio/locais/${localId}/secoes`, { q, situacao, pagina, limite: LIMITE }),
+  );
+
+  async function excluirLocal() {
+    setTrabalhando(true);
+    setErroExcluir("");
+    const r = await enviar("DELETE", `/api/locais-secoes/locais/${localId}`);
+    setTrabalhando(false);
+    if (!r.ok) {
+      setErroExcluir(r.erro.mensagem);
+      return;
+    }
+    onVoltar();
+  }
+
+  const colunas: readonly DataTableColumn<SecaoLinha>[] = [
+    { key: "section", label: "Seção", columnWidth: "72px", render: (r) => r.numero_secao },
+    { key: "president", label: "Presidente", columnWidth: "1.15fr", render: (r) => <span className={r.presidente ? undefined : styles.vacancyText}>{r.presidente ?? "Vaga"}</span> },
+    { key: "first", label: "1º mesário", columnWidth: "1.1fr", render: (r) => <span className={r.primeiro_mesario ? undefined : styles.vacancyText}>{r.primeiro_mesario ?? "Vaga"}</span> },
+    { key: "second", label: "2º mesário", columnWidth: "1.1fr", render: (r) => <span className={r.segundo_mesario ? undefined : styles.vacancyText}>{r.segundo_mesario ?? "Vaga"}</span> },
+    { key: "secretary", label: "Secretário", columnWidth: "1.1fr", render: (r) => <span className={r.secretario ? undefined : styles.vacancyText}>{r.secretario ?? "Vaga"}</span> },
+    {
+      key: "situation",
+      label: "Situação",
+      columnWidth: "104px",
+      render: (r) => (
         <StatusBadge
           className={styles.badge}
-          status={row.situation}
+          status={r.vagas ? StatusBadgeType.LocalAtencao : StatusBadgeType.LocalCompleto}
+          label={r.vagas ? `${r.vagas} ${r.vagas === 1 ? "vaga" : "vagas"}` : "Completa"}
         />
       ),
     },
     {
       key: "action",
       label: "Ação",
-      columnWidth: "190px",
+      columnWidth: "72px",
       horizontalAlignment: "center",
-      render: () => (
-        <BrButton
-          className={styles.rowAction}
-          emphasis="tertiary"
-          density="small"
-          type="button"
-          onClick={() => setView("polling-place")}
-        >
-          Ver seções
-
-          <BrIcon
-            iconName="fa6-solid:arrow-right"
-            source="auto"
-            width="12"
-            height="12"
-            aria-hidden="true"
-          />
-        </BrButton>
-      ),
-    },
-  ];
-
-  const sectionColumns: readonly DataTableColumn<SectionRow>[] = [
-    { key: "section", label: "Seção", columnWidth: "72px", render: (row) => row.section },
-    { key: "president", label: "Presidente", columnWidth: "1.15fr", render: (row) => <span className={row.vacancies ? styles.vacancyText : undefined}>{row.president}</span> },
-    { key: "firstWorker", label: "1º mesário", columnWidth: "1.1fr", render: (row) => row.firstWorker },
-    { key: "secondWorker", label: "2º mesário", columnWidth: "1.1fr", render: (row) => row.secondWorker },
-    { key: "secretary", label: "Secretário", columnWidth: "1.1fr", render: (row) => row.secretary },
-    {
-      key: "situation", label: "Situação", columnWidth: "104px",
-      render: (row) => <StatusBadge className={styles.badge} status={row.vacancies ? StatusBadgeType.LocalAtencao : StatusBadgeType.LocalCompleto} label={row.vacancies ? "1 vaga" : "Completa"} />,
-    },
-    {
-      key: "action", label: "Ação", columnWidth: "72px", horizontalAlignment: "center",
-      render: (row) => (
-        <BrButton className={styles.iconAction} emphasis="tertiary" shape="circle" type="button" aria-label={`Abrir seção ${row.section}`} onClick={() => setView("section")}>
+      render: (r) => (
+        <BrButton className={styles.iconAction} emphasis="tertiary" shape="circle" type="button" aria-label={`Abrir seção ${r.numero_secao}`} onClick={() => onAbrirSecao(r.id)}>
           <BrIcon iconName="fa6-solid:chevron-right" source="auto" width="12" height="12" aria-hidden="true" />
         </BrButton>
       ),
     },
   ];
 
-  const compositionColumns: readonly DataTableColumn<CompositionRow>[] = [
-    {
-      key: "role",
-      label: "Função",
-      columnWidth: "160px",
-      render: (row) => row.role,
-    },
-    {
-      key: "person",
-      label: "Pessoa",
-      columnWidth: "fill",
-      render: (row) => row.person,
-    },
+  const l = local.dados?.data;
+  const r = secoes.dados?.resumo;
+
+  return (
+    <div className={styles.page}>
+      <PageHeader
+        title={l?.nome ?? "Local de votação"}
+        description={l ? `${l.cidade}/${l.uf} · ${l.zona_eleitoral}ª Zona Eleitoral · ${l.endereco}${l.bairro ? `, ${l.bairro}` : ""}` : undefined}
+        action={
+          <Grupo>
+            <BrButton emphasis="secondary" density="small" type="button" onClick={onVoltar}>Voltar</BrButton>
+            <BrButton emphasis="primary" density="small" type="button" onClick={() => setNovaSecao(true)}>+ Nova seção</BrButton>
+            <BrButton emphasis="secondary" density="small" type="button" disabled={!l} onClick={() => setEditar(true)}>Editar local</BrButton>
+            <BrButton emphasis="secondary" density="small" type="button" onClick={() => { setErroExcluir(""); setExcluir(true); }}>Excluir local</BrButton>
+          </Grupo>
+        }
+      />
+      {local.erro && <p role="alert">{local.erro}</p>}
+      <Resumo
+        rotulo="Resumo do local"
+        itens={[
+          { label: "Seções", value: r?.secoes ?? 0 },
+          { label: "Completas", value: r?.completas ?? 0 },
+          { label: "Com vagas", value: r?.com_vagas ?? 0 },
+          { label: "Vagas abertas", value: r?.vagas_abertas ?? 0 },
+        ]}
+      />
+      <DataTable
+        title="Seções do local"
+        columns={colunas}
+        rows={secoes.dados?.itens ?? []}
+        getRowKey={(x) => x.id}
+        density="medium"
+        overflow="truncate"
+        headerActions={
+          <>
+            <CampoBusca
+              placeholder="Buscar por seção ou pessoa..."
+              valor={q}
+              onBuscar={(t) => {
+                setQ(t);
+                setPagina(1);
+              }}
+            />
+            <FiltroSelect
+              rotulo="Situação"
+              valor={situacao}
+              opcoes={[
+                { valor: "com_vaga", rotulo: "Com vaga" },
+                { valor: "completa", rotulo: "Completa" },
+              ]}
+              onChange={(v) => {
+                setSituacao(v);
+                setPagina(1);
+              }}
+            />
+          </>
+        }
+        footer={
+          <>
+            <EstadoLista
+              carregando={secoes.carregando}
+              erro={secoes.erro}
+              vazio={secoes.dados?.itens.length === 0}
+              textoVazio="Nenhuma seção. Use “+ Nova seção” para cadastrar."
+              onTentarDeNovo={secoes.recarregar}
+            />
+            <Paginador pagina={pagina} limite={LIMITE} total={secoes.dados?.total ?? 0} rotulo="Paginação das seções do local" onPagina={setPagina} />
+          </>
+        }
+      />
+
+      {novaSecao && (
+        <SecaoFormModal
+          localId={localId}
+          onFechar={() => setNovaSecao(false)}
+          onSalvo={() => {
+            setNovaSecao(false);
+            secoes.recarregar();
+            local.recarregar();
+          }}
+        />
+      )}
+      {editar && l && (
+        <LocalFormModal
+          local={l}
+          onFechar={() => setEditar(false)}
+          onSalvo={() => {
+            setEditar(false);
+            local.recarregar();
+          }}
+        />
+      )}
+      {excluir && (
+        <ConfirmarModal
+          titulo="Excluir local"
+          texto={`Excluir “${l?.nome ?? "este local"}” e todas as suas seções? Só é possível se ninguém estiver alocado nelas.`}
+          confirmar="Excluir local"
+          trabalhando={trabalhando}
+          erro={erroExcluir}
+          onConfirmar={excluirLocal}
+          onFechar={() => setExcluir(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ---------- composição de uma seção ---------- */
+
+function VistaSecao({ secaoId, onVoltar }: Readonly<{ secaoId: number; onVoltar: () => void }>) {
+  const secao = useApi<{ data: SecaoDetalhe }>(`/api/cartorio/secoes/${secaoId}`);
+  const [buscar, setBuscar] = useState<string | null>(null);
+  const [remover, setRemover] = useState<Composicao | null>(null);
+  const [excluir, setExcluir] = useState(false);
+  const [perfil, setPerfil] = useState<number | null>(null);
+  const [trabalhando, setTrabalhando] = useState(false);
+  const [erroAcao, setErroAcao] = useState("");
+
+  const s = secao.dados?.data;
+  const descricao = s ? `Seção ${s.numero_secao} · ${s.local.nome}` : "";
+
+  async function removerAlocacao() {
+    if (!remover?.alocacao_id) return;
+    setTrabalhando(true);
+    setErroAcao("");
+    const r = await enviar("DELETE", `/api/cartorio/alocacoes/${remover.alocacao_id}`);
+    setTrabalhando(false);
+    if (!r.ok) {
+      setErroAcao(r.erro.mensagem);
+      return;
+    }
+    setRemover(null);
+    secao.recarregar();
+  }
+
+  async function excluirSecao() {
+    setTrabalhando(true);
+    setErroAcao("");
+    const r = await enviar("DELETE", `/api/locais-secoes/${secaoId}`);
+    setTrabalhando(false);
+    if (!r.ok) {
+      setErroAcao(r.erro.mensagem);
+      return;
+    }
+    onVoltar();
+  }
+
+  const colunas: readonly DataTableColumn<Composicao>[] = [
+    { key: "role", label: "Função", columnWidth: "160px", render: (r) => ROTULO_FUNCAO[r.funcao] },
+    { key: "person", label: "Pessoa", columnWidth: "fill", render: (r) => r.nome ?? "—" },
     {
       key: "situation",
       label: "Situação",
       columnWidth: "190px",
-      render: (row) => (
-        <StatusBadge
-          className={styles.compositionBadge}
-          status={row.situation}
-          label={row.situationLabel}
-        />
-      ),
+      render: (r) => {
+        if (!r.alocacao_id) {
+          return <StatusBadge className={styles.compositionBadge} status={StatusBadgeType.PrioridadeCritica} label="Vaga não preenchida" />;
+        }
+        const selo = SELO_SELECAO[r.selecao ?? "pre_selecionado"];
+        return <StatusBadge className={styles.compositionBadge} status={selo.tipo} label={selo.rotulo} />;
+      },
     },
     {
       key: "action",
       label: "Ação",
       columnWidth: "220px",
       horizontalAlignment: "center",
-      render: (row) => (
-        <BrButton
-          className={styles.rowAction}
-          emphasis="tertiary"
-          density="small"
-          type="button"
-          onClick={() => row.id === 1 && setFindVolunteerOpen(true)}
-        >
-          {row.action}
-
-          <BrIcon
-            iconName="fa6-solid:arrow-right"
-            source="auto"
-            width="12"
-            height="12"
-            aria-hidden="true"
-          />
-        </BrButton>
-      ),
+      render: (r) =>
+        r.alocacao_id ? (
+          <>
+          <BrButton className={styles.rowAction} emphasis="tertiary" density="small" type="button" aria-label={`Ver perfil de ${r.nome}`} onClick={() => setPerfil(r.mesario_id)}>
+            Ver perfil
+          </BrButton>
+          <BrButton className={styles.rowAction} emphasis="tertiary" density="small" type="button" aria-label={`Remover ${r.nome} da função ${ROTULO_FUNCAO[r.funcao]}`} onClick={() => { setErroAcao(""); setRemover(r); }}>
+            Remover
+          </BrButton>
+          </>
+        ) : (
+          <BrButton className={styles.rowAction} emphasis="tertiary" density="small" type="button" aria-label={`Encontrar voluntário para ${ROTULO_FUNCAO[r.funcao]}`} onClick={() => setBuscar(r.funcao)}>
+            Encontrar voluntário
+            <BrIcon iconName="fa6-solid:arrow-right" source="auto" width="12" height="12" aria-hidden="true" />
+          </BrButton>
+        ),
     },
   ];
 
-  if (view === "polling-place") {
-    return (
-      <div className={styles.page}>
-        <PageHeader title="EEB João XXIII" description="Ibirama · 12ª Zona Eleitoral" action={<BrButton emphasis="secondary" density="small" type="button" onClick={() => setView("locations")}>Voltar</BrButton>} />
-        <Summary items={[{ label: "Seções", value: 12 }, { label: "Completas", value: 11 }, { label: "Com vagas", value: 1 }, { label: "Vagas abertas", value: 1 }]} />
-        <DataTable
-          title="Seções do local" columns={sectionColumns} rows={sections} getRowKey={(row) => row.id} density="medium" overflow="truncate"
-          headerActions={<SearchActions placeholder="Buscar por seção ou pessoa..." />}
-          headerContent={<FilterTag label="Situação: Com vaga" />}
-          footer={<BrPagination variant="contextual" current={1} total={1} totalItems={12} perPage={10} ariaLabel="Paginação das seções do local" />}
-        />
-      </div>
-    );
-  }
-
-  if (view === "section") {
-    return (
-      <div className={styles.page}>
-        <PageHeader title="Seção 184" description="EEB João XXIII · Ibirama · 12ª Zona Eleitoral" action={<BrButton emphasis="secondary" density="small" type="button" onClick={() => setView("polling-place")}>Voltar</BrButton>} />
-        <section className={styles.sectionStatus} aria-label="Situação da seção">
-          <strong>Situação da seção</strong>
-          <span>1 vaga aberta · Presidente sem responsável</span>
-          <StatusBadge className={styles.badge} status={StatusBadgeType.LocalAtencao} />
-        </section>
-        <DataTable title="Composição da mesa" columns={compositionColumns} rows={composition} getRowKey={(row) => row.id} density="medium" overflow="truncate" />
-        <section className={styles.operationalNotes}>
-          <h3>Observações operacionais</h3>
-          <p>A seção precisa de um presidente para completar a composição.</p>
-          <p>Pendência “Seção incompleta” criada automaticamente.</p>
-        </section>
-        <VolunteerModal open={findVolunteerOpen} onClose={() => setFindVolunteerOpen(false)} onSelect={() => { setFindVolunteerOpen(false); setConfirmOpen(true); }} />
-        <ConfirmModal open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={() => { setConfirmOpen(false); setSuccessOpen(true); }} />
-        <SuccessModal open={successOpen} onClose={() => setSuccessOpen(false)} />
-      </div>
-    );
-  }
+  const vagas = s?.vagas ?? 0;
+  const faltam = s?.composicao.filter((c) => c.funcao !== "suplente" && !c.alocacao_id).map((c) => ROTULO_FUNCAO[c.funcao]) ?? [];
 
   return (
     <div className={styles.page}>
-      <PageHeader title="Locais e seções" description="Acompanhe a composição das seções eleitorais sob responsabilidade da sua unidade." />
-      <Summary items={[{ label: "Locais de votação", value: 24 }, { label: "Seções", value: 184 }, { label: "Seções completas", value: 171 }, { label: "Seções com vagas", value: 13 }]} />
-      <DataTable
-        title="Locais da unidade" columns={locationColumns} rows={pollingPlaces} getRowKey={(row) => row.id} density="medium" overflow="truncate"
-        headerActions={<SearchActions placeholder="Buscar por local ou município..." activeFilters={2} />}
-        headerContent={<><FilterTag label="Situação: Com vagas" /><FilterTag label="Município: Ibirama" /></>}
-        footer={<BrPagination variant="contextual" current={1} total={3} totalItems={24} perPage={10} ariaLabel="Paginação dos locais da unidade" />}
+      <PageHeader
+        title={s ? `Seção ${s.numero_secao}` : "Seção"}
+        description={s ? `${s.local.nome} · ${s.local.cidade}/${s.local.uf} · ${s.local.zona_eleitoral}ª Zona Eleitoral` : undefined}
+        action={
+          <Grupo>
+            <BrButton emphasis="secondary" density="small" type="button" onClick={onVoltar}>Voltar</BrButton>
+            <BrButton emphasis="secondary" density="small" type="button" onClick={() => { setErroAcao(""); setExcluir(true); }}>Excluir seção</BrButton>
+          </Grupo>
+        }
       />
+      {secao.erro && <p role="alert">{secao.erro}</p>}
+
+      {s && (
+        <section className={styles.sectionStatus} aria-label="Situação da seção">
+          <strong>Situação da seção</strong>
+          <span>{vagas === 0 ? "Mesa completa" : `${vagas} ${vagas === 1 ? "vaga aberta" : "vagas abertas"} · ${faltam.join(", ")}`}</span>
+          <StatusBadge className={styles.badge} status={vagas === 0 ? StatusBadgeType.LocalCompleto : StatusBadgeType.LocalAtencao} />
+        </section>
+      )}
+
+      <DataTable
+        title="Composição da mesa"
+        columns={colunas}
+        rows={s?.composicao ?? []}
+        getRowKey={(c) => c.alocacao_id ?? c.funcao}
+        density="medium"
+        overflow="truncate"
+        footer={<EstadoLista carregando={secao.carregando} erro={secao.erro} vazio={false} textoVazio="" onTentarDeNovo={secao.recarregar} />}
+      />
+
+      {s && (
+        <section className={styles.operationalNotes}>
+          <h3>Suplentes</h3>
+          <p>Suplentes não ocupam vaga da mesa. Você pode adicionar quantos forem necessários.</p>
+          <BrButton emphasis="secondary" density="small" type="button" onClick={() => setBuscar("suplente")}>
+            + Adicionar suplente
+          </BrButton>
+        </section>
+      )}
+
+      {s && (
+        <section className={styles.operationalNotes}>
+          <h3>Histórico recente</h3>
+          <Historico eventos={s.historico} vazio="Nenhum registro para esta seção ainda." />
+        </section>
+      )}
+
+      {perfil !== null && <DetalheVoluntarioModal id={perfil} onFechar={() => setPerfil(null)} />}
+
+      {buscar && s && (
+        <CandidatosModal
+          secaoId={secaoId}
+          funcao={buscar}
+          descricao={descricao}
+          onAlocado={secao.recarregar}
+          onFechar={() => setBuscar(null)}
+        />
+      )}
+      {remover && (
+        <ConfirmarModal
+          titulo="Remover pré-seleção"
+          texto={`${remover.nome} deixará de ocupar a função de ${ROTULO_FUNCAO[remover.funcao]}. A convocação ficará registrada como cancelada.`}
+          confirmar="Remover"
+          trabalhando={trabalhando}
+          erro={erroAcao}
+          onConfirmar={removerAlocacao}
+          onFechar={() => setRemover(null)}
+        />
+      )}
+      {excluir && (
+        <ConfirmarModal
+          titulo="Excluir seção"
+          texto="Excluir esta seção? Só é possível se ninguém estiver alocado nela."
+          confirmar="Excluir seção"
+          trabalhando={trabalhando}
+          erro={erroAcao}
+          onConfirmar={excluirSecao}
+          onFechar={() => setExcluir(false)}
+        />
+      )}
     </div>
-  );
-}
-
-function VolunteerModal({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: () => void }) {
-  return (
-    <BrModal className={styles.volunteerModal} show={open} size="medium" scrollable autoClose alignFooter="end" onBrModalClose={onClose}>
-      <div slot="header" className={styles.modalHeader}>
-        <h2>Encontrar voluntário para Presidente</h2>
-        <p>Seção 184 · EEB João XXIII</p>
-      </div>
-      <div className={styles.modalContent}>
-        <p>Selecione uma pessoa apta e disponível. Os critérios abaixo apenas ajudam a organizar a busca; a decisão continua sendo do servidor.</p>
-        <div className={styles.modalSearchRow}><BrInput className={styles.modalSearch} type="search" density="small" highlight placeholder="Buscar por nome, CPF ou título..." ariaLabel="Buscar voluntário"><BrButton slot="action" emphasis="tertiary" shape="circle" type="button" aria-label="Executar busca"><BrIcon iconName="fa6-solid:magnifying-glass" source="auto" width="16" height="16" aria-hidden="true" /></BrButton></BrInput><BrButton emphasis="primary" density="small" type="button">Filtros</BrButton></div>
-        <h3>8 voluntários compatíveis</h3>
-        <p>Prioridade operacional: mesmo local de votação e experiência anterior na função.</p>
-        <article className={styles.volunteerCard}>
-          <div className={styles.volunteerHeading}><strong>Ana Silva</strong><span>Alta compatibilidade</span></div>
-          <p>EEB João XXIII · Presidente em 2024 · Disponível</p>
-          <div className={styles.tags}><span>Vota neste local</span><span>Experiência como presidente</span></div>
-          <BrButton emphasis="primary" density="small" type="button" onClick={onSelect}>Pré-selecionar</BrButton>
-        </article>
-      </div>
-      <div slot="footer"><BrButton emphasis="secondary" density="small" type="button" onClick={onClose}>Fechar</BrButton></div>
-    </BrModal>
-  );
-}
-
-function ConfirmModal({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: () => void }) {
-  return (
-    <BrModal className={styles.confirmModal} show={open} size="medium" autoClose alignFooter="end" onBrModalClose={onClose}>
-      <div slot="header" className={styles.modalHeader}><h2>Confirmar pré-seleção</h2><p>Revise a vaga antes de confirmar.</p></div>
-      <div className={styles.modalContent}>
-        <section className={styles.selectionSummary}><div><strong>Ana Carolina da Silva</strong><span>Interesse ativo</span></div><b>Presidente · Seção 184</b><p>EEB João XXIII</p><p>Compatibilidade: vota neste local e já atuou como presidente.</p></section>
-        <p>Essa ação reserva a voluntária provisoriamente para a vaga. A pré-seleção não representa convocação e nenhuma comunicação será enviada neste momento.</p>
-      </div>
-      <div slot="footer" className={styles.modalFooter}><BrButton emphasis="secondary" density="small" type="button" onClick={onClose}>Cancelar</BrButton><BrButton emphasis="primary" density="small" type="button" onClick={onConfirm}>Confirmar pré-seleção</BrButton></div>
-    </BrModal>
-  );
-}
-
-function SuccessModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return (
-    <BrModal className={styles.successModal} show={open} size="medium" autoClose alignFooter="end" onBrModalClose={onClose}>
-      <div slot="header" className={styles.modalHeader}><h2>Pré-seleção concluída</h2></div>
-      <div className={styles.successContent}><span className={styles.successIcon}><BrIcon iconName="fa6-solid:check" source="auto" width="28" height="28" aria-hidden="true" /></span><h3>Ana Silva foi pré-selecionada</h3><p>Presidente · Seção 184 · EEB João XXIII</p><div className={styles.successInfo}>A vaga foi reservada provisoriamente. Nenhuma convocação ou comunicação foi enviada.</div></div>
-      <div slot="footer" className={styles.modalFooter}><BrButton emphasis="secondary" density="small" type="button" onClick={onClose}>Fechar</BrButton><BrButton emphasis="primary" density="small" type="button" onClick={onClose}>Ver pré-seleção</BrButton></div>
-    </BrModal>
   );
 }

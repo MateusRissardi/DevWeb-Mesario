@@ -1,92 +1,81 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import {
     BrButton,
     BrCheckbox,
     BrIcon,
+    BrModal,
 } from "@govbr-ds/webcomponents-react";
 
+import {
+    enviar,
+    ROTULO_FUNCAO,
+    useApi,
+    type ConvocacaoLinha,
+    type Pagina,
+    type ResumoConvocacoes,
+} from "@/lib/api/cartorio";
+
 import DataTable, { type DataTableColumn } from "./DataTable";
+import { EstadoLista } from "./Controles";
 import PageHeader from "./PageHeader";
 import StatusBadge, { StatusBadgeType } from "./StatusBadge";
 
+import modais from "./Modais.module.css";
 import styles from "./PrepareConvocations.module.css";
 
-interface PrepareConvocationsProps {
-    onBack: () => void;
-    onConfirm: (selectedIds: number[]) => void;
-    onViewDetails: () => void;
-    onResolveContact: () => void;
-}
+type Etapa = "revisao" | "confirmar" | "concluido";
 
-interface ConvocationReview {
-    id: number;
-    person: string;
-    location: string;
-    role: string;
-    channel: string;
-    blocked: boolean;
-}
-
-const rows: readonly ConvocationReview[] = [
-    {
-        id: 1,
-        person: "Ana Silva",
-        location: "EEB João XXIII · 184",
-        role: "Presidente",
-        channel: "WhatsApp",
-        blocked: false,
-    },
-    {
-        id: 2,
-        person: "Mariana Costa",
-        location: "EEB Central · 193",
-        role: "2º mesário",
-        channel: "WhatsApp",
-        blocked: false,
-    },
-    {
-        id: 3,
-        person: "João Costa",
-        location: "E.M.C.S. · 205",
-        role: "1º mesário",
-        channel: "WhatsApp",
-        blocked: true,
-    },
-];
-
+/** Marca como "convocado" as convocações pendentes escolhidas. Não envia mensagens. */
 export default function PrepareConvocations({
     onBack,
-    onConfirm,
-    onViewDetails,
-    onResolveContact,
-}: Readonly<PrepareConvocationsProps>) {
-    const selectableIds = useMemo(
-        () => rows.filter((row) => !row.blocked).map((row) => row.id),
-        [],
-    );
+}: Readonly<{ onBack: () => void }>) {
+    const { dados, erro, carregando, recarregar } = useApi<
+        Pagina<ConvocacaoLinha, ResumoConvocacoes>
+    >("/api/cartorio/convocacoes?status=pendente&limite=100");
 
-    const [selectedIds, setSelectedIds] = useState<number[]>(selectableIds);
+    const [desmarcados, setDesmarcados] = useState<number[]>([]);
+    const [etapa, setEtapa] = useState<Etapa>("revisao");
+    const [trabalhando, setTrabalhando] = useState(false);
+    const [erroEnvio, setErroEnvio] = useState("");
+    const [resultado, setResultado] = useState({ atualizadas: 0, ignoradas: 0 });
 
-    const allSelected =
-        selectableIds.length > 0 &&
-        selectableIds.every((id) => selectedIds.includes(id));
+    const linhas = dados?.itens ?? [];
+    const prontas = linhas.filter((l) => l.contato_ok && l.alocacao_id !== null);
+    const selecionados = prontas.filter((l) => !desmarcados.includes(l.id));
+    const bloqueadas = linhas.length - prontas.length;
+    const todosMarcados = prontas.length > 0 && selecionados.length === prontas.length;
 
-    function toggleRow(id: number) {
-        setSelectedIds((current) =>
-            current.includes(id)
-                ? current.filter((selectedId) => selectedId !== id)
-                : [...current, id],
+    function alternar(id: number) {
+        setDesmarcados((atual) =>
+            atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id],
         );
     }
 
-    function toggleAll() {
-        setSelectedIds(allSelected ? [] : selectableIds);
+    function alternarTodos() {
+        setDesmarcados(todosMarcados ? prontas.map((p) => p.id) : []);
     }
 
-    const columns: readonly DataTableColumn<ConvocationReview>[] = [
+    async function confirmar() {
+        setTrabalhando(true);
+        setErroEnvio("");
+        const r = await enviar<{ atualizadas: number; ignoradas: number }>(
+            "POST",
+            "/api/cartorio/convocacoes/lote",
+            { ids: selecionados.map((s) => s.id) },
+        );
+        setTrabalhando(false);
+        if (!r.ok) {
+            setErroEnvio(r.erro.campos.ids ?? r.erro.mensagem);
+            return;
+        }
+        setResultado(r.dados);
+        setEtapa("concluido");
+    }
+
+    const colunas: readonly DataTableColumn<ConvocacaoLinha>[] = [
         {
             key: "selection",
             label: "Selecionar",
@@ -95,181 +84,178 @@ export default function PrepareConvocations({
             header: (
                 <BrCheckbox
                     name="select-all-convocations"
-                    checked={allSelected}
+                    checked={todosMarcados}
                     aria-label="Selecionar todas as convocações disponíveis"
-                    onChange={toggleAll}
+                    onChange={alternarTodos}
                 />
             ),
             render: (item) => (
                 <BrCheckbox
                     name="convocation-selection"
                     value={String(item.id)}
-                    checked={selectedIds.includes(item.id)}
-                    disabled={item.blocked}
-                    aria-label={`Selecionar convocação de ${item.person}`}
-                    onChange={() => toggleRow(item.id)}
+                    checked={selecionados.some((s) => s.id === item.id)}
+                    disabled={!item.contato_ok}
+                    aria-label={`Selecionar convocação de ${item.nome}`}
+                    onChange={() => alternar(item.id)}
                 />
             ),
         },
-        {
-            key: "person",
-            label: "Pessoa",
-            columnWidth: "0.85fr",
-            render: (item) => item.person,
-        },
+        { key: "person", label: "Pessoa", columnWidth: "0.85fr", render: (r) => r.nome },
         {
             key: "location",
             label: "Local / seção",
             columnWidth: "1.1fr",
-            render: (item) => item.location,
+            render: (r) => (r.local ? `${r.local} · ${r.numero_secao}` : "—"),
         },
-        {
-            key: "role",
-            label: "Função",
-            columnWidth: "0.75fr",
-            render: (item) => item.role,
-        },
-        {
-            key: "channel",
-            label: "Canal",
-            columnWidth: "0.65fr",
-            render: (item) => item.channel,
-        },
+        { key: "role", label: "Função", columnWidth: "0.75fr", render: (r) => (r.funcao ? ROTULO_FUNCAO[r.funcao] : "—") },
+        { key: "phone", label: "Telefone", columnWidth: "0.8fr", render: (r) => r.telefone || "—" },
         {
             key: "status",
             label: "Situação",
             columnWidth: "152px",
-            render: (item) =>
-                item.blocked ? (
-                    <StatusBadge
-                        status={StatusBadgeType.ConvocacaoFalha}
-                        label="Contato inválido"
-                    />
+            render: (r) =>
+                r.contato_ok ? (
+                    <StatusBadge status={StatusBadgeType.ManifestacaoApta} label="Pronto" />
                 ) : (
-                    <StatusBadge
-                        status={StatusBadgeType.ManifestacaoApta}
-                        label="Pronto"
-                    />
+                    <StatusBadge status={StatusBadgeType.ConvocacaoFalha} label="Sem telefone" />
                 ),
-        },
-        {
-            key: "action",
-            label: "Ação",
-            columnWidth: "128px",
-            horizontalAlignment: "center",
-
-            render: (item) => (
-                <BrButton
-                    className={styles.rowAction}
-                    emphasis="tertiary"
-                    density="small"
-                    type="button"
-                    aria-label={
-                        item.blocked
-                            ? `Resolver contato de ${item.person}`
-                            : `Ver convocação de ${item.person}`
-                    }
-                    onClick={() => {
-                        if (item.blocked) {
-                            onResolveContact();
-                            return;
-                        }
-
-                        onViewDetails();
-                    }}
-                >
-                    {item.blocked ? "Resolver" : "Ver"}
-
-                    <BrIcon
-                        iconName="fa6-solid:arrow-right"
-                        source="auto"
-                        width="12"
-                        height="12"
-                        aria-hidden="true"
-                    />
-                </BrButton>
-            ),
         },
     ];
 
     return (
         <div className={styles.page}>
             <PageHeader
-                title="Preparar envios"
-                description="Revise as convocações que ainda não foram encaminhadas antes de iniciar o envio."
+                title="Preparar registros"
+                description="Revise as convocações pendentes e registre as que já foram feitas. Nenhuma mensagem é enviada."
             />
 
-            <div className={styles.warning} role="status">
-                <BrIcon
-                    iconName="fa6-solid:triangle-exclamation"
-                    source="auto"
-                    width="18"
-                    height="18"
-                    aria-hidden="true"
-                />
-
-                <span>
-                    <strong>3 convocações estão bloqueadas</strong> e não serão
-                    incluídas no envio.
-                </span>
-            </div>
-
-            <section className={styles.summary} aria-label="Resumo dos envios">
-                <div>
-                    <strong>Aguardando envio</strong>
-                    <span>30</span>
+            {bloqueadas > 0 && (
+                <div className={styles.warning} role="status">
+                    <BrIcon iconName="fa6-solid:triangle-exclamation" source="auto" width="18" height="18" aria-hidden="true" />
+                    <span>
+                        <strong>{bloqueadas} {bloqueadas === 1 ? "convocação está bloqueada" : "convocações estão bloqueadas"}</strong>{" "}
+                        por falta de telefone e não {bloqueadas === 1 ? "será incluída" : "serão incluídas"}.
+                    </span>
                 </div>
+            )}
 
+            <section className={styles.summary} aria-label="Resumo das convocações">
                 <div>
-                    <strong>Enviadas</strong>
-                    <span>164</span>
+                    <strong>Pendentes</strong>
+                    <span>{linhas.length}</span>
                 </div>
-
+                <div>
+                    <strong>Prontas</strong>
+                    <span>{prontas.length}</span>
+                </div>
                 <div>
                     <strong>Selecionadas</strong>
-                    <span>{selectedIds.length}</span>
+                    <span>{selecionados.length}</span>
                 </div>
             </section>
 
             <DataTable
-                title="Pré-seleções para revisão"
-                columns={columns}
-                rows={rows}
-                getRowKey={(item) => item.id}
+                title="Convocações pendentes"
+                columns={colunas}
+                rows={linhas}
+                getRowKey={(r) => r.id}
                 density="medium"
                 overflow="wrap"
+                footer={
+                    <EstadoLista
+                        carregando={carregando}
+                        erro={erro}
+                        vazio={linhas.length === 0}
+                        textoVazio="Não há convocações pendentes."
+                        onTentarDeNovo={recarregar}
+                    />
+                }
             />
 
             <footer className={styles.footer}>
                 <p>
-                    <strong>{selectedIds.length}</strong>{" "}
-                    {selectedIds.length === 1
-                        ? "convocação selecionada"
-                        : "convocações selecionadas"}{" "}
-                    para confirmar
+                    <strong>{selecionados.length}</strong>{" "}
+                    {selecionados.length === 1 ? "convocação selecionada" : "convocações selecionadas"} para registrar
                 </p>
-
                 <div className={styles.footerActions}>
-                    <BrButton
-                        emphasis="secondary"
-                        density="small"
-                        type="button"
-                        onClick={onBack}
-                    >
+                    <BrButton emphasis="secondary" density="small" type="button" onClick={onBack}>
                         Voltar
                     </BrButton>
-
                     <BrButton
                         emphasis="primary"
                         density="small"
                         type="button"
-                        disabled={selectedIds.length === 0}
-                        onClick={() => onConfirm(selectedIds)}
+                        disabled={selecionados.length === 0}
+                        onClick={() => setEtapa("confirmar")}
                     >
-                        Confirmar envio
+                        Registrar convocações
                     </BrButton>
                 </div>
             </footer>
+
+            {etapa === "confirmar" && (
+                <BrModal
+                    show
+                    autoClose
+                    scrollable
+                    size="medium"
+                    titleText="Registrar convocações"
+                    alignFooter="end"
+                    onBrModalClose={() => setEtapa("revisao")}
+                >
+                    <div className={modais.content}>
+                        <p>As pessoas abaixo serão marcadas como <strong>convocadas</strong>. Faça o contato por telefone; o sistema não envia mensagens.</p>
+                        <ul>
+                            {selecionados.map((s) => (
+                                <li key={s.id}>
+                                    <strong>{s.nome}</strong> · {s.funcao ? ROTULO_FUNCAO[s.funcao] : ""} · {s.local} · seção {s.numero_secao}
+                                </li>
+                            ))}
+                        </ul>
+                        {erroEnvio && (
+                            <p className={modais.erro} role="alert">
+                                {erroEnvio}
+                            </p>
+                        )}
+                    </div>
+                    <div slot="footer" className={modais.rodape}>
+                        <BrButton emphasis="secondary" density="small" type="button" onClick={() => setEtapa("revisao")}>
+                            Cancelar
+                        </BrButton>
+                        <BrButton emphasis="primary" density="small" type="button" disabled={trabalhando} onClick={confirmar}>
+                            {trabalhando ? "Aguarde..." : "Registrar"}
+                        </BrButton>
+                    </div>
+                </BrModal>
+            )}
+
+            {etapa === "concluido" && (
+                <BrModal
+                    show
+                    autoClose
+                    size="medium"
+                    titleText="Registro concluído"
+                    alignFooter="end"
+                    onBrModalClose={onBack}
+                >
+                    <div className={modais.content}>
+                        <p>
+                            <strong>{resultado.atualizadas}</strong>{" "}
+                            {resultado.atualizadas === 1 ? "convocação foi registrada" : "convocações foram registradas"} como convocadas.
+                        </p>
+                        {resultado.ignoradas > 0 && (
+                            <p className={modais.aviso}>
+                                {resultado.ignoradas} não {resultado.ignoradas === 1 ? "foi alterada" : "foram alteradas"} porque já {resultado.ignoradas === 1 ? "mudou" : "mudaram"} de situação ou {resultado.ignoradas === 1 ? "está" : "estão"} sem telefone.
+                            </p>
+                        )}
+                    </div>
+                    <div slot="footer" className={modais.rodape}>
+                        <BrButton emphasis="primary" density="small" type="button" onClick={onBack}>
+                            Ver lista
+                        </BrButton>
+                    </div>
+                </BrModal>
+            )}
         </div>
     );
 }

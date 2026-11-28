@@ -11,26 +11,16 @@ import {
 
 import styles from "./PendingSummary.module.css";
 
-const summaryItems = [
-    {
-        label: "Todas",
-        value: 35,
-    },
-    {
-        label: "Críticas",
-        value: 4,
-    },
-    {
-        label: "Atenção",
-        value: 23,
-    },
-    {
-        label: "Informativas",
-        value: 8,
-    },
-] as const;
+export interface SummaryItem {
+    label: string;
+    value: number;
+}
 
-export default function PendingSummary() {
+interface PendingSummaryProps {
+    items: readonly SummaryItem[];
+}
+
+export default function PendingSummary({ items: summaryItems }: Readonly<PendingSummaryProps>) {
     return (
         <section
             className={styles.root}

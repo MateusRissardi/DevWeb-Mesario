@@ -71,6 +71,7 @@ export const criarMesarioSchema = z.object({
   secao_eleitoral: inteiroPositivo("Informe a seção eleitoral (maior que zero)"),
   local_votacao: texto("o local de votação"),
   telefone: opcionalOuAusente(telefone),
+  telefone_whatsapp: z.boolean().optional(),
   email: opcionalOuAusente(email),
 });
 
@@ -79,12 +80,19 @@ export const atualizarMesarioSchema = z
     telefone: opcional(telefone).optional(),
     email: opcional(email).optional(),
     status_interesse: z.boolean("Informe true ou false").optional(),
+    telefone_whatsapp: z.boolean("Informe true ou false").optional(),
+    // Só o cartório altera estes dois (a rota confere).
+    data_nascimento: z.iso.date("Informe a data de nascimento no formato AAAA-MM-DD").optional(),
+    municipio: texto("o município").optional(),
   })
   .refine(
     (dados) =>
       dados.telefone !== undefined ||
       dados.email !== undefined ||
-      dados.status_interesse !== undefined,
+      dados.status_interesse !== undefined ||
+      dados.telefone_whatsapp !== undefined ||
+      dados.data_nascimento !== undefined ||
+      dados.municipio !== undefined,
     "Informe ao menos um campo para atualizar",
   );
 

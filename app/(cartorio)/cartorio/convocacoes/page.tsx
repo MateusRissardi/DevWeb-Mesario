@@ -4,62 +4,28 @@ import { useState } from "react";
 
 import { BrButton, BrMessage } from "@govbr-ds/webcomponents-react";
 
-import ConvocationsSummary from "@/components/cartorio/ConvocationsSummary";
 import ConvocationsTable from "@/components/cartorio/ConvocationsTable";
 import PageHeader from "@/components/cartorio/PageHeader";
 import PrepareConvocations from "@/components/cartorio/PrepareConvocations";
 import styles from "./page.module.css";
 
-import ConvocationDetailsModals, {
-  type ConvocationDetailsModalMode,
-} from "@/components/cartorio/ConvocationDetailsModals";
-
-import ConvocationSendModals, {
-  type SendModalMode,
-} from "@/components/cartorio/ConvocationSendModals";
-
-type PageMode = "list" | "prepare";
+const AVISO =
+  "O envio de mensagens está desativado nesta versão. As telas servem apenas para registrar e acompanhar o status das convocações; nenhuma mensagem é enviada aos mesários.";
 
 export default function ConvocacoesPage() {
-  const [mode, setMode] = useState<PageMode>("list");
-  const [modalMode, setModalMode] = useState<SendModalMode>(null);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [detailsModalMode, setDetailsModalMode] = useState<ConvocationDetailsModalMode>(null);
+  const [preparando, setPreparando] = useState(false);
+  // Muda ao voltar do preparo, para a lista buscar os dados de novo.
+  const [versao, setVersao] = useState(0);
 
-  if (mode === "prepare") {
+  if (preparando) {
     return (
       <>
-        <BrMessage
-          state="warning"
-          showIcon
-          message="O envio de mensagens está desativado nesta versão. As telas servem apenas para registrar e acompanhar o status das convocações; nenhuma mensagem é enviada aos mesários."
-        />
-
+        <BrMessage state="warning" showIcon message={AVISO} />
         <PrepareConvocations
-          onBack={() => setMode("list")}
-          onConfirm={(ids) => {
-            setSelectedIds(ids);
-            setModalMode("confirm");
+          onBack={() => {
+            setPreparando(false);
+            setVersao((v) => v + 1);
           }}
-          onViewDetails={() => setDetailsModalMode("details")}
-          onResolveContact={() => setDetailsModalMode("contact-failure")}
-        />
-
-        <ConvocationSendModals
-          mode={modalMode}
-          selectedIds={selectedIds}
-          onClose={() => setModalMode(null)}
-          onSend={() => setModalMode("success")}
-          onViewList={() => {
-            setModalMode(null);
-            setMode("list");
-          }}
-        />
-
-        <ConvocationDetailsModals
-          mode={detailsModalMode}
-          onClose={() => setDetailsModalMode(null)}
-          onResend={() => setDetailsModalMode(null)}
         />
       </>
     );
@@ -70,7 +36,7 @@ export default function ConvocacoesPage() {
       <div className={styles.headingRow}>
         <PageHeader
           title="Convocações"
-          description="Acompanhe o envio, a entrega e a ciência das convocações dos mesários selecionados."
+          description="Acompanhe a situação das convocações dos mesários pré-selecionados."
         />
 
         <BrButton
@@ -78,30 +44,15 @@ export default function ConvocacoesPage() {
           emphasis="primary"
           density="small"
           type="button"
-          onClick={() => setMode("prepare")}
+          onClick={() => setPreparando(true)}
         >
-          Preparar envios
+          Preparar registros
         </BrButton>
       </div>
 
-      <BrMessage
-        state="warning"
-        showIcon
-        message="O envio de mensagens está desativado nesta versão. As telas servem apenas para registrar e acompanhar o status das convocações; nenhuma mensagem é enviada aos mesários."
-      />
+      <BrMessage state="warning" showIcon message={AVISO} />
 
-      <ConvocationsSummary />
-
-      <ConvocationsTable
-        onViewDetails={() => setDetailsModalMode("details")}
-        onResolveContact={() => setDetailsModalMode("contact-failure")}
-      />
-
-      <ConvocationDetailsModals
-        mode={detailsModalMode}
-        onClose={() => setDetailsModalMode(null)}
-        onResend={() => setDetailsModalMode(null)}
-      />
+      <ConvocationsTable key={versao} />
     </div>
   );
 }

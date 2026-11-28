@@ -7,4 +7,10 @@ const pool = new Pool({
   },
 });
 
+// Conexão ociosa derrubada pelo servidor (reinício, limite do pooler): sem este
+// tratador o Node derruba o processo e despeja o objeto da conexão no log.
+pool.on('error', (erro) => {
+  console.error('[pg] erro em conexão ociosa:', erro.message);
+});
+
 export default pool;

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import {
   BrButton,
   BrCard,
@@ -12,6 +14,7 @@ export interface AttentionItem {
   title: string;
   description: string;
   actionLabel: string;
+  href?: string;
 }
 
 interface AttentionCardProps {
@@ -23,12 +26,15 @@ export default function AttentionCard({
   title,
   items,
 }: Readonly<AttentionCardProps>) {
+  const router = useRouter();
+
   return (
     <BrCard className={styles.card}>
       <section className={styles.content} aria-label={title}>
         <h2 className={styles.title}>{title}</h2>
 
         <div className={styles.list}>
+          {items.length === 0 && <p className={styles.description}>Nada pendente no momento.</p>}
           {items.map((item) => (
             <article className={styles.item} key={item.id}>
               <h3 className={styles.itemTitle}>{item.title}</h3>
@@ -44,6 +50,7 @@ export default function AttentionCard({
                 density="small"
                 shape="pill"
                 value={item.id}
+                onClick={() => item.href && router.push(item.href)}
               >
                 {item.actionLabel}
               </BrButton>

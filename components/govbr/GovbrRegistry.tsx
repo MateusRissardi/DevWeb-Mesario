@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { defineCustomElements } from '@govbr-ds/webcomponents/loader';
 
 export default function GovbrRegistry({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   useEffect(() => {
     defineCustomElements(window);

@@ -1,11 +1,12 @@
 import pool from "@/lib/db";
+import { registrarEvento } from "@/lib/server/db/eventos";
 
 // Lista explícita: o codigo_titulo nunca sai do banco por aqui.
 const COLUNAS = `id, cpf, titulo_eleitor, nome_civil,
   to_char(data_nascimento, 'YYYY-MM-DD') AS data_nascimento,
   nome_mae, nome_pai, municipio, zona_eleitoral, secao_eleitoral,
-  local_votacao, telefone, email, status_interesse, status_convocacao,
-  criado_em`;
+  local_votacao, telefone, telefone_whatsapp, email, status_interesse,
+  status_convocacao, origem, situacao_analise, criado_em`;
 
 export interface MesarioRegistro {
   id: number;
@@ -20,9 +21,12 @@ export interface MesarioRegistro {
   secao_eleitoral: number;
   local_votacao: string;
   telefone: string | null;
+  telefone_whatsapp: boolean;
   email: string | null;
   status_interesse: boolean | null;
   status_convocacao: string | null;
+  origem: "portal" | "presencial";
+  situacao_analise: "nova" | "em_analise" | "apta";
   criado_em: Date | null;
 }
 
@@ -72,6 +76,7 @@ export interface DadosNovoMesario {
   secao_eleitoral: number;
   local_votacao: string;
   telefone: string | null;
+  telefone_whatsapp?: boolean;
   email: string | null;
 }
 
@@ -83,6 +88,10 @@ export interface DadosNovoMesario {
 export async function inserirMesario(
   dados: DadosNovoMesario,
   usuarioId: number | null = null,
+  opcoes: { origem: "portal" | "presencial"; autorId: number | null } = {
+    origem: "portal",
+    autorId: null,
+  },
 ): Promise<MesarioRegistro | null> {
   const cliente = await pool.connect();
   try {
@@ -91,8 +100,9 @@ export async function inserirMesario(
     const inserido = await cliente.query<MesarioRegistro>(
       `INSERT INTO mesarios
          (cpf, titulo_eleitor, nome_civil, data_nascimento, nome_mae, nome_pai,
-          municipio, zona_eleitoral, secao_eleitoral, local_votacao, telefone, email)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          municipio, zona_eleitoral, secao_eleitoral, local_votacao, telefone, email,
+          telefone_whatsapp, origem)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING ${COLUNAS}`,
       [
         dados.cpf,
@@ -107,6 +117,8 @@ export async function inserirMesario(
         dados.local_votacao,
         dados.telefone,
         dados.email,
+        dados.telefone_whatsapp ?? false,
+        opcoes.origem,
       ],
     );
     const mesario = inserido.rows[0];
@@ -123,6 +135,15 @@ export async function inserirMesario(
       }
     }
 
+    await registrarEvento(
+      cliente,
+      "manifestacao",
+      mesario.id,
+      opcoes.origem === "presencial"
+        ? "Manifestação registrada em atendimento presencial no cartório."
+        : "Manifestação registrada pelo Portal do Mesário.",
+      opcoes.autorId,
+    );
     await cliente.query("COMMIT");
     return mesario;
   } catch (erro) {
@@ -140,12 +161,23 @@ export async function atualizarMesario(
     telefone?: string | null;
     email?: string | null;
     status_interesse?: boolean;
+    data_nascimento?: string;
+    municipio?: string;
+    telefone_whatsapp?: boolean;
   },
+  autorEquipeId: number | null = null,
 ): Promise<MesarioRegistro | null> {
   const atribuicoes: string[] = [];
   const valores: unknown[] = [];
 
-  for (const coluna of ["telefone", "email", "status_interesse"] as const) {
+  for (const coluna of [
+    "telefone",
+    "email",
+    "status_interesse",
+    "data_nascimento",
+    "municipio",
+    "telefone_whatsapp",
+  ] as const) {
     const valor = campos[coluna];
     if (valor !== undefined) {
       valores.push(valor);
@@ -160,6 +192,9 @@ export async function atualizarMesario(
      RETURNING ${COLUNAS}`,
     valores,
   );
+  if (resultado.rows[0] && autorEquipeId !== null) {
+    await registrarEvento(pool, "manifestacao", id, "Dados cadastrais atualizados pelo cartório.", autorEquipeId);
+  }
   return resultado.rows[0] ?? null;
 }
 

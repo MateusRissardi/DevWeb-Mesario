@@ -2,317 +2,162 @@
 
 import { useState } from "react";
 
+import { BrButton, BrIcon } from "@govbr-ds/webcomponents-react";
+
 import {
-    BrButton,
-    BrIcon,
-    BrInput,
-    BrPagination,
-} from "@govbr-ds/webcomponents-react";
+  formatarQuando,
+  useLista,
+  type PendenciaLinha,
+  type ResumoPendencias,
+} from "@/lib/api/cartorio";
 
-import DataTable, {
-    type DataTableColumn,
-} from "./DataTable";
-
-import StatusBadge, {
-    StatusBadgeType,
-} from "./StatusBadge";
-
-import PendingDetailModal, {
-    type PendingDetail,
-} from "./PendingDetailModal";
+import { BarraFiltros, ChipsFiltros, EstadoLista, RodapeLista, type DefinicaoFiltro } from "./Controles";
+import DataTable, { type DataTableColumn } from "./DataTable";
+import DetalheVoluntarioModal from "./DetalheVoluntarioModal";
+import PendenciaModal from "./PendenciaModal";
+import PendingSummary from "./PendingSummary";
+import { ROTULO_TIPO_PENDENCIA, SELO_PRIORIDADE, SELO_STATUS_PENDENCIA } from "./rotulos";
+import StatusBadge from "./StatusBadge";
 
 import styles from "./PendingUnitTable.module.css";
 
+const PRIORIDADES = [
+  { valor: "critica", rotulo: "Crítica" },
+  { valor: "atencao", rotulo: "Atenção" },
+  { valor: "informativa", rotulo: "Informativa" },
+] as const;
 
-interface FilterTagProps {
-    label: string;
-}
+const STATUS = [
+  { valor: "aberta", rotulo: "Aberta" },
+  { valor: "em_analise", rotulo: "Em análise" },
+  { valor: "resolvida", rotulo: "Resolvida" },
+] as const;
 
-function FilterTag({ label }: FilterTagProps) {
-    return (
-        <span className={styles.filterTag}>
-            <span>{label}</span>
+const TIPOS = Object.entries(ROTULO_TIPO_PENDENCIA).map(([valor, rotulo]) => ({ valor, rotulo }));
 
-            <BrButton
-                className={styles.removeFilterButton}
-                emphasis="tertiary"
-                shape="circle"
-                type="button"
-                aria-label={`Remover filtro ${label}`}
-            >
-                <BrIcon
-                    iconName="fa6-solid:xmark"
-                    source="auto"
-                    width="12"
-                    height="12"
-                    aria-hidden="true"
-                />
-            </BrButton>
-        </span>
-    );
-}
+export default function PendingUnitTable({ tipoInicial = "" }: Readonly<{ tipoInicial?: string }>) {
+  const lista = useLista<PendenciaLinha, ResumoPendencias>("/api/cartorio/pendencias", {
+    status: "",
+    prioridade: "",
+    tipo: tipoInicial,
+  });
+  const [aberta, setAberta] = useState<number | null>(null);
+  const [voluntario, setVoluntario] = useState<number | null>(null);
+  const { dados, erro, carregando, recarregar } = lista;
 
-interface PendingItem {
-    id: number;
-    priority: StatusBadgeType;
-    pending: string;
-    personOrSection: string;
-    context: string;
-    responsible: string;
-    createdAt: string;
-    situation: StatusBadgeType;
-    detail?: PendingDetail;
-}
+  const filtros: DefinicaoFiltro[] = [
+    { chave: "status", rotulo: "Situação", valor: lista.filtros.status, opcoes: STATUS },
+    { chave: "prioridade", rotulo: "Prioridade", valor: lista.filtros.prioridade, opcoes: PRIORIDADES },
+    { chave: "tipo", rotulo: "Tipo", valor: lista.filtros.tipo, opcoes: TIPOS },
+  ];
 
-const pendingItems: readonly PendingItem[] = [
+  const colunas: readonly DataTableColumn<PendenciaLinha>[] = [
     {
-        id: 1,
-        priority: StatusBadgeType.PrioridadeCritica,
-        pending: "Seção incompleta",
-        personOrSection: "Seção 184",
-        context: "Presidente sem responsável",
-        responsible: "Não atribuído",
-        createdAt: "Hoje, 09:42",
-        situation: StatusBadgeType.PendenciaAberta,
-        detail: {
-            title: "Seção 184 — EEB João XXIII",
-            metadata: "Crítica · Aberta · Criada hoje às 10:42 · Carlos",
-            reason: "Seção não possui presidente selecionado",
-            firstPollWorker: "Ana Silva",
-            secondPollWorker: "Pedro Costa",
-            secretary: "Maria Souza",
-            history: [
-                {
-                    date: "Hoje, 11:15",
-                    description: "Carlos iniciou análise.",
-                },
-                {
-                    date: "Hoje, 10:42",
-                    description: "Pendência criada automaticamente.",
-                },
-            ],
-        },
+      key: "priority",
+      label: "Prioridade",
+      columnWidth: "0.8fr",
+      render: (r) => <StatusBadge className={styles.badge} status={SELO_PRIORIDADE[r.prioridade]} />,
+    },
+    { key: "pending", label: "Pendência", columnWidth: "1fr", render: (r) => r.titulo },
+    { key: "person", label: "Pessoa / Seção", columnWidth: "1.4fr", render: (r) => r.pessoa ?? r.secao ?? "—" },
+    { key: "context", label: "Contexto", columnWidth: "1.5fr", render: (r) => r.contexto },
+    { key: "owner", label: "Respons.", columnWidth: "0.8fr", render: (r) => r.responsavel ?? "—" },
+    { key: "createdAt", label: "Criada em", columnWidth: "0.9fr", render: (r) => formatarQuando(r.criada_em) },
+    {
+      key: "status",
+      label: "Situação",
+      columnWidth: "0.8fr",
+      render: (r) =>
+        r.status === "resolvida" ? "Resolvida" : <StatusBadge status={SELO_STATUS_PENDENCIA[r.status]} />,
     },
     {
-        id: 2,
-        priority: StatusBadgeType.PrioridadeAtencao,
-        pending: "Possível impedimento",
-        personOrSection: "Ana Silva",
-        context: "Pré-selecionada · Seção 204",
-        responsible: "Artur",
-        createdAt: "Hoje, 08:17",
-        situation: StatusBadgeType.PendenciaEmAnalise,
+      key: "action",
+      label: "Ação",
+      columnWidth: "80px",
+      horizontalAlignment: "center",
+      render: (r) => (
+        <BrButton
+          className={styles.actionButton}
+          emphasis="tertiary"
+          shape="circle"
+          type="button"
+          aria-label={`Ver pendência ${r.titulo}${r.pessoa ? ` de ${r.pessoa}` : ""}`}
+          onClick={() => setAberta(r.id)}
+        >
+          <BrIcon iconName="fa6-solid:eye" source="auto" width="16" height="16" aria-hidden="true" />
+        </BrButton>
+      ),
     },
-    {
-        id: 3,
-        priority: StatusBadgeType.PrioridadeAtencao,
-        pending: "Falha de contato",
-        personOrSection: "João Costa",
-        context: "Convocação não entregue",
-        responsible: "Não atribuído",
-        createdAt: "Ontem",
-        situation: StatusBadgeType.PendenciaAberta,
-    },
-    {
-        id: 4,
-        priority: StatusBadgeType.PrioridadeInformativa,
-        pending: "Interesse retirado",
-        personOrSection: "Maria Pereira",
-        context: "Seleção vinculada · Seção 311",
-        responsible: "Juliana",
-        createdAt: "Ontem",
-        situation: StatusBadgeType.PendenciaAberta,
-    },
-];
-function createColumns(
-    onView: (item: PendingItem) => void,
-): readonly DataTableColumn<PendingItem>[] {
-    return [
-        {
-            key: "priority",
-            label: "Prioridade",
-            columnWidth: "110px",
-            render: (item) => (
-                <StatusBadge
-                    className={styles.badge}
-                    status={item.priority}
-                />
-            ),
-        },
-        {
-            key: "pending",
-            label: "Pendência",
-            columnWidth: "1.5fr",
-            render: (item) => item.pending,
-        },
-        {
-            key: "personOrSection",
-            label: "Pessoa/Seção",
-            columnWidth: "1.35fr",
-            render: (item) => item.personOrSection,
-        },
-        {
-            key: "context",
-            label: "Contexto",
-            columnWidth: "1.75fr",
-            render: (item) => item.context,
-        },
-        {
-            key: "responsible",
-            label: "Respon.",
-            columnWidth: "1fr",
-            render: (item) => item.responsible,
-        },
-        {
-            key: "createdAt",
-            label: "Criada em",
-            columnWidth: "1fr",
-            render: (item) => item.createdAt,
-        },
-        {
-            key: "situation",
-            label: "Situação",
-            columnWidth: "110px",
-            render: (item) => (
-                <StatusBadge
-                    className={styles.badge}
-                    status={item.situation}
-                />
-            ),
-        },
-        {
-            key: "action",
-            label: "Ação",
-            columnWidth: "96px",
-            horizontalAlignment: "center",
-            render: (item) => (
-                <div className={styles.actionCell}>
-                    <BrButton
-                        className={styles.actionButton}
-                        emphasis="tertiary"
-                        shape="circle"
-                        type="button"
-                        aria-label={`Visualizar pendência: ${item.pending}`}
-                    >
-                        <BrIcon
-                            iconName="fa6-solid:eye"
-                            source="auto"
-                            width="16"
-                            onClick={() => onView(item)}
-                            height="16"
-                            aria-hidden="true"
-                        />
-                    </BrButton>
-                </div>
-            ),
-        },
-    ];
-}
-export default function PendingUnitTable() {
-    const [selectedPending, setSelectedPending] =
-        useState<PendingDetail | null>(null);
+  ];
 
-    const columns = createColumns((item) => {
-        if (item.detail) {
-            setSelectedPending(item.detail);
+  const resumo = dados?.resumo;
+
+  return (
+    <>
+      <PendingSummary
+        items={[
+          { label: "Todas", value: resumo?.todas ?? 0 },
+          { label: "Críticas", value: resumo?.criticas ?? 0 },
+          { label: "Atenção", value: resumo?.atencao ?? 0 },
+          { label: "Informativas", value: resumo?.informativas ?? 0 },
+        ]}
+      />
+
+      <DataTable
+        title="Pendências da unidade"
+        columns={colunas}
+        rows={dados?.itens ?? []}
+        getRowKey={(r) => r.id}
+        density="medium"
+        overflow="truncate"
+        headerActions={
+          <BarraFiltros
+            placeholder="Buscar por pessoa, seção ou contexto..."
+            busca={lista.q}
+            onBuscar={lista.setQ}
+            filtros={filtros}
+            onFiltro={lista.setFiltro}
+            onLimpar={lista.limpar}
+          />
         }
-    });
-
-    return (
-        <>
-            <DataTable
-                title="Pendências da Unidade"
-                columns={columns}
-                rows={pendingItems}
-                getRowKey={(item) => item.id}
-                density="medium"
-                overflow="wrap"
-                headerActions={
-                    <>
-                        <BrInput
-                            className={styles.search}
-                            type="search"
-                            density="small"
-                            highlight
-                            placeholder="Buscar por nome, CPF, título, seção, local..."
-                            ariaLabel="Buscar pendências"
-                        >
-                            <BrButton
-                                className={styles.searchButton}
-                                slot="action"
-                                emphasis="tertiary"
-                                shape="circle"
-                                type="button"
-                                aria-label="Executar busca"
-                            >
-                                <BrIcon
-                                    iconName="fa6-solid:magnifying-glass"
-                                    source="auto"
-                                    width="16"
-                                    height="16"
-                                    aria-hidden="true"
-                                />
-                            </BrButton>
-                        </BrInput>
-
-                        <BrButton
-                            className={styles.filterButton}
-                            emphasis="primary"
-                            density="small"
-                            type="button"
-                            aria-label="Abrir filtros, dois filtros ativos"
-                        >
-                            <span>Filtros</span>
-                            <span
-                                className={styles.filterCount}
-                                aria-hidden="true"
-                            >
-                                2
-                            </span>
-                        </BrButton>
-
-                        <BrButton
-                            className={styles.moreButton}
-                            emphasis="tertiary"
-                            density="small"
-                            shape="circle"
-                            type="button"
-                            aria-label="Mais opções"
-                        >
-                            <BrIcon
-                                iconName="fa6-solid:ellipsis-vertical"
-                                source="auto"
-                                width="16"
-                                height="16"
-                                aria-hidden="true"
-                            />
-                        </BrButton>
-                    </>
-                }
-                headerContent={
-                    <>
-                        <FilterTag label="Situação: Aberta" />
-                        <FilterTag label="Situação: Em análise" />
-                    </>
-                }
-                footer={
-                    <BrPagination
-                        className={styles.pagination}
-                        variant="contextual"
-                        current={1}
-                        total={1}
-                        totalItems={4}
-                        perPage={10}
-                        ariaLabel="Paginação das pendências da unidade"
-                    />
-                }
+        headerContent={
+          <ChipsFiltros filtros={filtros} busca={lista.q} onFiltro={lista.setFiltro} onBuscar={lista.setQ} />
+        }
+        footer={
+          <>
+            <EstadoLista
+              carregando={carregando}
+              erro={erro}
+              vazio={dados?.itens.length === 0}
+              textoVazio="Nenhuma pendência. Tudo em dia."
+              onTentarDeNovo={recarregar}
             />
-
-            <PendingDetailModal
-                open={selectedPending !== null}
-                detail={selectedPending}
-                onClose={() => setSelectedPending(null)}
+            <RodapeLista
+              pagina={lista.pagina}
+              limite={lista.limite}
+              total={dados?.total ?? 0}
+              onPagina={lista.setPagina}
+              onLimite={lista.setLimite}
+              unidade="pendências"
             />
-        </>
-    );
+          </>
+        }
+      />
+
+      {aberta !== null && (
+        <PendenciaModal
+          id={aberta}
+          onMudou={recarregar}
+          onFechar={() => setAberta(null)}
+          onVerVoluntario={(m) => {
+            setAberta(null);
+            setVoluntario(m);
+          }}
+        />
+      )}
+      {voluntario !== null && (
+        <DetalheVoluntarioModal id={voluntario} onFechar={() => setVoluntario(null)} />
+      )}
+    </>
+  );
 }

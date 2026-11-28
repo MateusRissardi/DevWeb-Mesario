@@ -1,237 +1,153 @@
 "use client";
 
-import {
-    BrButton,
-    BrIcon,
-    BrInput,
-    BrPagination,
-} from "@govbr-ds/webcomponents-react";
+import { useState } from "react";
 
+import { BrButton, BrIcon } from "@govbr-ds/webcomponents-react";
+
+import {
+  formatarQuando,
+  ROTULO_FUNCAO,
+  useLista,
+  type ConvocacaoLinha,
+  type ResumoConvocacoes,
+} from "@/lib/api/cartorio";
+
+import { BarraFiltros, ChipsFiltros, EstadoLista, RodapeLista, type DefinicaoFiltro } from "./Controles";
+import ConvocationsSummary from "./ConvocationsSummary";
 import DataTable, { type DataTableColumn } from "./DataTable";
-import StatusBadge, { StatusBadgeType } from "./StatusBadge";
+import DetalheConvocacaoModal from "./DetalheConvocacaoModal";
+import { SELO_CONVOCACAO } from "./rotulos";
+import StatusBadge from "./StatusBadge";
 
 import styles from "./ConvocationsTable.module.css";
 
-interface Convocation {
-    id: number;
-    person: string;
-    location: string;
-    role: string;
-    channel: string;
-    status: StatusBadgeType;
-    updatedAt: string;
-    actionLabel: string;
-}
+const STATUS = [
+  { valor: "pendente", rotulo: "Pendente" },
+  { valor: "convocado", rotulo: "Convocado" },
+  { valor: "confirmado", rotulo: "Confirmado" },
+  { valor: "recusado", rotulo: "Recusado" },
+  { valor: "cancelado", rotulo: "Cancelado" },
+] as const;
 
-interface FilterTagProps {
-    label: string;
-}
+export default function ConvocationsTable() {
+  const lista = useLista<ConvocacaoLinha, ResumoConvocacoes>("/api/cartorio/convocacoes", { status: "" });
+  const [aberta, setAberta] = useState<ConvocacaoLinha | null>(null);
+  const { dados, erro, carregando, recarregar } = lista;
 
-interface ConvocationsTableProps {
-    onViewDetails: () => void;
-    onResolveContact: () => void;
-}
+  const filtros: DefinicaoFiltro[] = [
+    { chave: "status", rotulo: "Situação", valor: lista.filtros.status, opcoes: STATUS },
+  ];
 
-const convocations: readonly Convocation[] = [
+  const colunas: readonly DataTableColumn<ConvocacaoLinha>[] = [
+    { key: "person", label: "Pessoa", columnWidth: "1fr", render: (r) => r.nome },
     {
-        id: 1,
-        person: "Ana Silva",
-        location: "EEB João XXIII · 184",
-        role: "Presidente",
-        channel: "WhatsApp",
-        status: StatusBadgeType.ConvocacaoNaoEnviada,
-        updatedAt: "—",
-        actionLabel: "Enviar",
+      key: "location",
+      label: "Local / seção",
+      columnWidth: "1.2fr",
+      render: (r) => (r.local ? `${r.local} · ${r.numero_secao}` : "—"),
+    },
+    { key: "role", label: "Função", columnWidth: "0.8fr", render: (r) => (r.funcao ? ROTULO_FUNCAO[r.funcao] : "—") },
+    {
+      key: "channel",
+      label: "Canal",
+      columnWidth: "0.9fr",
+      render: (r) => (r.telefone ? (r.telefone_whatsapp ? "WhatsApp" : "Telefone") : "Sem telefone"),
     },
     {
-        id: 2,
-        person: "Mariana Costa",
-        location: "EEB Central · 193",
-        role: "2º mesário",
-        channel: "WhatsApp",
-        status: StatusBadgeType.ConvocacaoCienciaConfirmada,
-        updatedAt: "Hoje, 17:10",
-        actionLabel: "Ver",
+      key: "status",
+      label: "Situação",
+      columnWidth: "0.9fr",
+      render: (r) => {
+        const selo = SELO_CONVOCACAO[r.status];
+        return <StatusBadge className={styles.statusBadge} status={selo.tipo} label={selo.rotulo} />;
+      },
     },
+    { key: "updatedAt", label: "Atualizada em", columnWidth: "0.9fr", render: (r) => formatarQuando(r.atualizada_em) },
     {
-        id: 3,
-        person: "João Costa",
-        location: "E.M.C.S. · 205",
-        role: "1º mesário",
-        channel: "WhatsApp",
-        status: StatusBadgeType.ConvocacaoFalha,
-        updatedAt: "Hoje, 16:32",
-        actionLabel: "Resolver",
+      key: "action",
+      label: "Ação",
+      columnWidth: "128px",
+      horizontalAlignment: "center",
+      render: (r) => (
+        <BrButton
+          className={styles.actionButton}
+          emphasis="tertiary"
+          density="small"
+          type="button"
+          aria-label={`Abrir convocação de ${r.nome}`}
+          onClick={() => setAberta(r)}
+        >
+          Abrir
+          <BrIcon iconName="fa6-solid:arrow-right" source="auto" width="12" height="12" aria-hidden="true" />
+        </BrButton>
+      ),
     },
-];
+  ];
 
-function FilterTag({ label }: Readonly<FilterTagProps>) {
-    return (
-        <span className={styles.filterTag}>
-            <span>{label}</span>
+  const resumo = dados?.resumo;
 
-            <BrButton
-                className={styles.removeFilterButton}
-                emphasis="tertiary"
-                shape="circle"
-                type="button"
-                aria-label={`Remover filtro ${label}`}
-            >
-                <BrIcon
-                    iconName="fa6-solid:xmark"
-                    source="auto"
-                    width="12"
-                    height="12"
-                    aria-hidden="true"
-                />
-            </BrButton>
-        </span>
-    );
-}
+  return (
+    <>
+      <ConvocationsSummary
+        items={[
+          { label: "Pendentes", value: resumo?.pendentes ?? 0 },
+          { label: "Convocados", value: resumo?.convocados ?? 0 },
+          { label: "Confirmados", value: resumo?.confirmados ?? 0 },
+          { label: "Recusados ou cancelados", value: (resumo?.recusados ?? 0) + (resumo?.cancelados ?? 0) },
+        ]}
+      />
 
-export default function ConvocationsTable({
-    onViewDetails,
-    onResolveContact,
-}: Readonly<ConvocationsTableProps>) {
-    const columns: readonly DataTableColumn<Convocation>[] = [
-        {
-            key: "person",
-            label: "Pessoa",
-            columnWidth: "0.6fr",
-            render: (item) => item.person,
-        },
-        {
-            key: "location",
-            label: "Local / seção",
-            columnWidth: "1fr",
-            render: (item) => item.location,
-        },
-        {
-            key: "role",
-            label: "Função",
-            columnWidth: "0.55fr",
-            render: (item) => item.role,
-        },
-        {
-            key: "channel",
-            label: "Canal",
-            columnWidth: "0.55fr",
-            render: (item) => item.channel,
-        },
-        {
-            key: "status",
-            label: "Situação",
-            columnWidth: "152px",
-            render: (item) => (
-                <StatusBadge
-                    className={styles.statusBadge}
-                    status={item.status}
-                />
-            ),
-        },
-        {
-            key: "updatedAt",
-            label: "Atualizada em",
-            columnWidth: "144px",
-            render: (item) => item.updatedAt,
-        },
-        {
-            key: "action",
-            label: "Ação",
-            columnWidth: "152px",
-            horizontalAlignment: "center",
-            render: (item) => (
-                <BrButton
-                    className={styles.actionButton}
-                    emphasis="tertiary"
-                    density="small"
-                    type="button"
-                    aria-label={`${item.actionLabel} convocação de ${item.person}`}
-                    onClick={() => {
-                        if (item.actionLabel === "Ver") {
-                            onViewDetails();
-                            return;
-                        }
+      <DataTable
+        title="Convocações da unidade"
+        columns={colunas}
+        rows={dados?.itens ?? []}
+        getRowKey={(r) => r.id}
+        density="medium"
+        overflow="wrap"
+        headerActions={
+          <BarraFiltros
+            placeholder="Buscar por nome, seção ou local..."
+            busca={lista.q}
+            onBuscar={lista.setQ}
+            filtros={filtros}
+            onFiltro={lista.setFiltro}
+            onLimpar={lista.limpar}
+          />
+        }
+        headerContent={
+          <ChipsFiltros filtros={filtros} busca={lista.q} onFiltro={lista.setFiltro} onBuscar={lista.setQ} />
+        }
+        footer={
+          <>
+            <EstadoLista
+              carregando={carregando}
+              erro={erro}
+              vazio={dados?.itens.length === 0}
+              textoVazio="Nenhuma convocação ainda. Elas aparecem depois que a seleção é confirmada."
+              onTentarDeNovo={recarregar}
+            />
+            <RodapeLista
+              pagina={lista.pagina}
+              limite={lista.limite}
+              total={dados?.total ?? 0}
+              onPagina={lista.setPagina}
+              onLimite={lista.setLimite}
+              unidade="convocações"
+            />
+          </>
+        }
+      />
 
-                        if (item.actionLabel === "Resolver") {
-                            onResolveContact();
-                        }
-                    }}
-                >
-                    {item.actionLabel}
-
-                    <BrIcon
-                        iconName="fa6-solid:arrow-right"
-                        source="auto"
-                        width="12"
-                        height="12"
-                        aria-hidden="true"
-                    />
-                </BrButton>
-            ),
-        },
-    ];
-
-    return (
-        <DataTable
-            title="Convocações da unidade"
-            columns={columns}
-            rows={convocations}
-            getRowKey={(item) => item.id}
-            density="medium"
-            overflow="wrap"
-            headerActions={
-                <>
-                    <BrInput
-                        className={styles.search}
-                        type="search"
-                        density="small"
-                        highlight
-                        placeholder="Buscar por nome, seção ou local..."
-                        ariaLabel="Buscar convocações"
-                    >
-                        <BrButton
-                            className={styles.searchButton}
-                            slot="action"
-                            emphasis="tertiary"
-                            shape="circle"
-                            type="button"
-                            aria-label="Executar busca"
-                        >
-                            <BrIcon
-                                iconName="fa6-solid:magnifying-glass"
-                                source="auto"
-                                width="14"
-                                height="14"
-                                aria-hidden="true"
-                            />
-                        </BrButton>
-                    </BrInput>
-
-                    <BrButton
-                        className={styles.filterButton}
-                        emphasis="primary"
-                        density="small"
-                        type="button"
-                    >
-                        Filtros
-                    </BrButton>
-                </>
-            }
-            headerContent={
-                <FilterTag label="Situação: Todas" />
-            }
-            footer={
-                <BrPagination
-                    className={styles.pagination}
-                    variant="contextual"
-                    current={1}
-                    total={20}
-                    totalItems={194}
-                    perPage={10}
-                    ariaLabel="Paginação das convocações"
-                />
-            }
+      {aberta && (
+        <DetalheConvocacaoModal
+          convocacao={aberta}
+          onFechar={() => setAberta(null)}
+          onSalvo={() => {
+            setAberta(null);
+            recarregar();
+          }}
         />
-    );
+      )}
+    </>
+  );
 }

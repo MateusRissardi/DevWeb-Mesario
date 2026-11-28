@@ -1,3 +1,7 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 import StatusBadge, {
     StatusBadgeType,
 } from "./StatusBadge";
@@ -19,6 +23,7 @@ interface LocationsAttentionCardProps {
 export default function LocationsAttentionCard({
     rows,
 }: Readonly<LocationsAttentionCardProps>) {
+    const router = useRouter();
     const titleId = "locations-attention-title";
 
     return (
@@ -81,6 +86,11 @@ export default function LocationsAttentionCard({
                     </thead>
 
                     <tbody>
+                        {rows.length === 0 && (
+                            <tr>
+                                <td colSpan={4}>Nenhum local com vagas abertas.</td>
+                            </tr>
+                        )}
                         {rows.map((location) => (
                             <tr key={location.id}>
                                 <td className={styles.locationName}>
@@ -111,6 +121,7 @@ export default function LocationsAttentionCard({
                 <button
                     className={`br-button primary small ${styles.viewAllButton}`}
                     type="button"
+                    onClick={() => router.push("/cartorio/locais-secoes")}
                 >
                     Ver todos os locais
                 </button>
